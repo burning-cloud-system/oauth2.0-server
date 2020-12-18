@@ -1,0 +1,44 @@
+{
+    "name": "burning-cloud-system/oauth2.0-server",
+    "description": "Lightweight and strong OAuth 2.0 authentication and resource server library.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Burning Cloud System",
+            "email": "package@burning-cloud.net"
+        }
+    ],
+    "keywords": [
+        "burning cloud",
+        "burning cloud system",
+        "oauth",
+        "oauth2",
+        "oauth 2",
+        "oauth 2.0"
+    ],
+    "support": {
+        "issues": "https://github.com/burning-cloud-system/oauth2.0-server/issues",
+        "wiki": "https://github.com/burning-cloud-system/oauth2.0-server/wiki",
+        "source": "https://github.com/burning-cloud-system/oauth2.0-server"
+    },
+    "require": {
+        "php": "^7.4"
+    },
+    "require-dev": {
+    },
+    "autoload": {
+        "psr-4": {
+            "BurningCloudSystem\\OAuth2\\Server\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BurningCloudSystem\\OAuth2\\Server\\": "tests"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev"
+}

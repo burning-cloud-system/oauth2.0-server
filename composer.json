@@ -23,9 +23,9 @@
         "source": "https://github.com/burning-cloud-system/oauth2.0-server"
     },
     "require": {
-        "php": "^7.4"
-    },
-    "require-dev": {
+        "php": "^7.4",
+        "defuse/php-encryption": "^2.2.1",
+        "psr/http-message": "^1.0.1"
     },
     "autoload": {
         "psr-4": {

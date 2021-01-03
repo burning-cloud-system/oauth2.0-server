@@ -76,8 +76,6 @@ class Server
         $this->grantTypes[$grantType->getIdentifier()] = $grantType;
     }
 
-
-
     /**
      * Validate an request
      *
@@ -85,7 +83,7 @@ class Server
      * @throws OAuthServerException
      * @return AuthorizationRequest
      */
-    public function validateRequest(ServerRequestInterface $request)
+    public function validateRequest(ServerRequestInterface $request) : AuthorizationRequest
     {
         foreach($this->grantTypes as $grantType) 
         {
@@ -98,7 +96,14 @@ class Server
         throw OAuthException::unsupportedGrantType();
     }
 
-    public function completeRequest(AuthorizationRequest $authorizationRequest, ResponseInterface $response)
+    /**
+     * Complete an authorization request
+     *
+     * @param AuthorizationRequest $authorizationRequest
+     * @param ResponseInterface $response
+     * @return ResponseInterface
+     */
+    public function completeRequest(AuthorizationRequest $authorizationRequest, ResponseInterface $response) : ResponseInterface
     {
         return $this->grantTypes[$authorizationRequest->getGrantTypeId()]
                         ->completeRequest($authorizationRequest)

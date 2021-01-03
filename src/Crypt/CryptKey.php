@@ -33,12 +33,13 @@ class CryptKey
      * @param string $keyPath
      * @param string|null $passPhrase
      * @param boolean $keyPermissionsCheck
+     * @param string|null $absolutePath
      */
-    public function __construct(string $keyPath, ?string $passPhrase = null, bool $keyPermissionsCheck = true)
+    public function __construct(string $keyPath, ?string $passPhrase = null, bool $keyPermissionsCheck = true, ?string $absolutePath = null)
     {
         if ($rsaMatch = preg_match(static::RSA_KEY_PATTERN, $keyPath))
         {
-            $keyPath = $this->saveKeyToFile($keyPath);
+            $keyPath = $this->saveKeyToFile($keyPath, $absolutePath);
         }
         elseif ($rsaMatch === false)
         {
@@ -74,12 +75,13 @@ class CryptKey
      * Save key to file.
      *
      * @param string $key
+     * @param string|null $path
      * @return void
      */
-    private function saveKeyToFile(string $key)
+    private function saveKeyToFile(string $key, ?string $path = null)
     {
-        $tmpDir = sys_get_temp_dir();
-        $keyPath = $tmpDir . '/' . sha1($key) . '.key';
+        $path = $path ?? sys_get_temp_dir();
+        $keyPath = $path . '/' . sha1($key) . '.key';
 
         if (file_exists($keyPath))
         {
@@ -88,7 +90,7 @@ class CryptKey
 
         if (file_put_contents($keyPath, $key) === false)
         {
-            throw new RuntimeException(sprintf('Unable to write key file to temporary directory "%s"', $tmpDir));
+            throw new RuntimeException(sprintf('Unable to write key file to temporary directory "%s"', $path));
         }
 
         if (chmod($keyPath, 0600) === false)

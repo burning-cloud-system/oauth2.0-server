@@ -71,7 +71,7 @@ trait CryptTrait
      * @param Key $key
      * @return void
      */
-    public function setEncryptionKey($key = null) : void
+    public function setEncryptionKey(Key $key = null) : void
     {
         $this->encryptionKey = $key;
     }

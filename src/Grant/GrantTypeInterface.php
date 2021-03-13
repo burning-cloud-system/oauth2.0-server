@@ -17,6 +17,7 @@ use DateInterval;
 use Defuse\Crypto\Key;
 use Psr\Http\Message\ServerRequestInterface;
 
+
 interface GrantTypeInterface
 {
     /**

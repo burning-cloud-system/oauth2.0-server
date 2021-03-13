@@ -13,17 +13,25 @@ use BurningCloudSystem\OAuth2\Server\Crypt\CryptKey;
 use BurningCloudSystem\OAuth2\Server\Models\ClientModelInterface;
 use BurningCloudSystem\OAuth2\Server\Request\AuthorizationRequest;
 use BurningCloudSystem\OAuth2\Server\Response\ResponseTypeInterface;
+use DateInterval;
 use Defuse\Crypto\Key;
 use Psr\Http\Message\ServerRequestInterface;
 
 interface GrantTypeInterface
 {
     /**
-     * Return the grant identifier that can be used in matching up requests.
+     * Return the grant type that can be used in matching up requests.
      *
      * @return string
      */
-    public function getIdentifier();
+    public function getGrantType() : string;
+
+    /**
+     * Return the response type that can be used in matching up requests.
+     *
+     * @return string|null
+     */
+    public function getResponseType() : ?string;
 
     /**
      * The grant type should return true if it is able to response to an request
@@ -32,7 +40,7 @@ interface GrantTypeInterface
      *
      * @return bool
      */
-    public function canRespondToRequest(ServerRequestInterface $request);
+    public function canRespondToAuthorizationRequest(ServerRequestInterface $request) : bool;
 
     /**
      * If the grant can respond to an request this method should be called to validate the parameters of
@@ -45,7 +53,7 @@ interface GrantTypeInterface
      *
      * @return AuthorizationRequest
      */
-    public function validateRequest(ServerRequestInterface $request) : AuthorizationRequest;
+    public function validateAuthorizationRequest(ServerRequestInterface $request) : AuthorizationRequest;
 
     /**
      * Once a user has authenticated and authorized the client the grant can complete the authorization request.
@@ -56,8 +64,29 @@ interface GrantTypeInterface
      *
      * @return ResponseTypeInterface
      */
-    public function completeRequest(AuthorizationRequest $authorizationRequest) : ResponseTypeInterface;
+    public function completeAuthorizationRequest(AuthorizationRequest $authorizationRequest) : ResponseTypeInterface;
     
+    /**
+     * The grant type should return true if it is able to respond to this request.
+     *
+     * For example most grant types will check that the $_POST['grant_type'] property matches it's identifier property.
+     *
+     * @param ServerRequestInterface $request
+     *
+     * @return bool
+     */
+    public function canRespondToAccessTokenRequest(ServerRequestInterface $request) : bool;
+
+    /**
+     * Respond to an incoming request.
+     *
+     * @param ServerRequestInterface $request
+     * @param ResponseTypeInterface $responseType
+     * @param DateInterval $accessTokenTTL
+     * @return ResponseTypeInterface
+     */
+    public function respondToAccessTokenRequest(ServerRequestInterface $request, ResponseTypeInterface $responseType, DateInterval $accessTokenTTL) : ResponseTypeInterface;
+
     /**
      * Set the client model.
      *

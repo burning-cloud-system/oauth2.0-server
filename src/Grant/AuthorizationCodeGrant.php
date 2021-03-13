@@ -15,7 +15,11 @@ use BurningCloudSystem\OAuth2\Server\Request\AuthorizationRequest;
 use BurningCloudSystem\OAuth2\Server\CodeChallengeVerifiers\PlainVerifier;
 use BurningCloudSystem\OAuth2\Server\CodeChallengeVerifiers\S256Verifier;
 use BurningCloudSystem\OAuth2\Server\Exception\OAuthException;
+use BurningCloudSystem\OAuth2\Server\Models\AccessTokenModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\AuthCodeModelInterface;
+use BurningCloudSystem\OAuth2\Server\Models\ClientModelInterface;
+use BurningCloudSystem\OAuth2\Server\Models\RefreshTokenModelInterface;
+use BurningCloudSystem\OAuth2\Server\Models\ScopeModelInterface;
 use BurningCloudSystem\OAuth2\Server\Request\Parame\AuthorizationParame;
 use BurningCloudSystem\OAuth2\Server\Response\RedirectResponse;
 use BurningCloudSystem\OAuth2\Server\Response\ResponseTypeInterface;
@@ -27,11 +31,6 @@ use Psr\Http\Message\ServerRequestInterface;
 class AuthorizationCodeGrant extends AbstractGrant
 {
     use AuthorizeGrantTrait;
-
-    /**
-     * @var AuthorizationParame
-     */
-    private AuthorizationParame $requestParame;
 
     /**
      * @var int
@@ -63,10 +62,10 @@ class AuthorizationCodeGrant extends AbstractGrant
      * 
      * @var void
      */
-    public function __construct(AuthCodeModelInterface $authCodeModel, ?DateInterval $authCodeTTL = null)
+    public function __construct(string $privateKey, string $encryptionKey, 
+        ClientModelInterface $clientModel, ScopeModelInterface $scopeModel, AuthCodeModelInterface $authCodeModel, AccessTokenModelInterface $accessTokenModel, RefreshTokenModelInterface $refreshTokenModel, 
+        ?DateInterval $authCodeTTL = null)
     {
-        $this->requestParame = new AuthorizationParame();
-
         $this->setAuthCodeModel($authCodeModel);
         $this->authCodeTTL = $authCodeTTL ?? new DateInterval('PT10M');
 
@@ -111,27 +110,19 @@ class AuthorizationCodeGrant extends AbstractGrant
     }
 
     /**
-     * Return the grant identifier that can be used in matching up requests.
-     *
-     * @return string
+     * {@inheritDoc}
      */
-    public function getIdentifier() : string
+    public function getGrantType() : string
     {
         return 'authorization_code';
     }
 
     /**
-     * The grant type should return true if it is able to response to an request
-     *
-     * @param ServerRequestInterface $request
-     *
-     * @return bool
+     * {@inheritDoc}
      */
-    public function canRespondToRequest(ServerRequestInterface $request) : bool
+    public function getResponseType() : ?string
     {
-        $this->requestParame->bindParame($request);
-
-        return $this->requestParame->responseType === 'code' && !is_null($this->requestParame->clientId);
+        return 'code';
     }
 
     /**
@@ -147,37 +138,40 @@ class AuthorizationCodeGrant extends AbstractGrant
      *
      * @return AuthorizationRequest
      */
-    public function validateRequest(ServerRequestInterface $request) : AuthorizationRequest
+    public function validateAuthorizationRequest(ServerRequestInterface $request) : AuthorizationRequest
     {
+        $authorizationParame = new AuthorizationParame();
+        $authorizationParame->bindParame($request);
+
         // check client
-        if ($this->requestParame->clientId === null) 
+        if ($authorizationParame->clientId === null) 
         {
             throw OAuthException::invalidRequest(AuthorizationParame::CLIENT_ID);
         }
-        $client = $this->getClientEntity($this->requestParame->clientId);
+        $client = $this->getClientEntity($authorizationParame->clientId);
         if ($client == null || $client instanceof ClientEntityInterface === false)
         {
             throw OAuthException::invalidClient($request);
         }
 
         // check redirect uri
-        if ($this->requestParame->redirectUri !== null)
+        if ($authorizationParame->redirectUri !== null)
         {
-            $this->validateRedirectUri($this->requestParame->redirectUri, $client, $request);
+            $this->validateRedirectUri($authorizationParame->redirectUri, $client, $request);
         } elseif (empty($client->getRedirectUri()))
         {
             throw OAuthException::invalidClient($request);
         }
-        $this->requestParame->redirectUri ?? $client->getRedirectUri();
+        $authorizationParame->redirectUri ?? $client->getRedirectUri();
 
-        (count($this->requestParame->scopes) === 0) 
+        (count($authorizationParame->scopes) === 0) 
             && !is_null($this->defaultScope) 
-            && ($this->requestParame->scopes[] = $this->defaultScope);
-        $scopes = $this->validateScopes($this->requestParame->scopes, $this->requestParame->redirectUri);
+            && ($authorizationParame->scopes[] = $this->defaultScope);
+        $scopes = $this->validateScopes($authorizationParame->scopes, $authorizationParame->redirectUri);
 
-        if ($this->requestParame->codeChallenge !== null) 
+        if ($authorizationParame->codeChallenge !== null) 
         {
-            if (array_key_exists($this->requestParame->codeChallengeMethod, $this->codeChallengeVerifiers) === false)
+            if (array_key_exists($authorizationParame->codeChallengeMethod, $this->codeChallengeVerifiers) === false)
             {
                 throw OAuthException::invalidRequest(
                     AuthorizationParame::CODE_CHALLENGE_METHOD,
@@ -188,7 +182,7 @@ class AuthorizationCodeGrant extends AbstractGrant
             }
 
             // RFC-7636, section 4.2.
-            if (preg_match('/^[A-Za-z0-9-._~]{43,128}$/', $this->requestParame->codeChallenge) !== 1)
+            if (preg_match('/^[A-Za-z0-9-._~]{43,128}$/', $authorizationParame->codeChallenge) !== 1)
             {
                 throw OAuthException::invalidRequest(
                     AuthorizationParame::CODE_CHALLENGE,
@@ -203,17 +197,17 @@ class AuthorizationCodeGrant extends AbstractGrant
         }
 
         $authorizationRequest = new AuthorizationRequest();
-        $authorizationRequest->setGrantTypeId($this->getIdentifier());
+        $authorizationRequest->setGrantTypeId($this->getGrantType());
         $authorizationRequest->setClient($client);
-        $authorizationRequest->setRedirectUri($this->requestParame->redirectUri);
-        if ($this->requestParame->state !== null) {
-            $authorizationRequest->setState($this->requestParame->state);
+        $authorizationRequest->setRedirectUri($authorizationParame->redirectUri);
+        if ($authorizationParame->state !== null) {
+            $authorizationRequest->setState($authorizationParame->state);
         }
         $authorizationRequest->setScopes($scopes);
-        if ($this->requestParame->codeChallenge !== null)
+        if ($authorizationParame->codeChallenge !== null)
         {
-            $authorizationRequest->setCodeChallenge($this->requestParame->codeChallenge);
-            $authorizationRequest->setCodeChallengMethod($this->requestParame->codeChallengeMethod);
+            $authorizationRequest->setCodeChallenge($authorizationParame->codeChallenge);
+            $authorizationRequest->setCodeChallengMethod($authorizationParame->codeChallengeMethod);
         }
 
         return $authorizationRequest;
@@ -225,7 +219,7 @@ class AuthorizationCodeGrant extends AbstractGrant
      * @param AuthorizationRequest $authorizationRequest
      * @return ResponseTypeInterface
      */
-    public function completeRequest(AuthorizationRequest $authorizationRequest) : ResponseTypeInterface
+    public function completeAuthorizationRequest(AuthorizationRequest $authorizationRequest) : ResponseTypeInterface
     {
         if ($authorizationRequest->getUser() instanceof UserEntityInterface === false)
         {
@@ -277,6 +271,14 @@ class AuthorizationCodeGrant extends AbstractGrant
             $this->makeRedirectUri(
                 $finalRedirectUri,
                 [ 'state' => $authorizationRequest->getState() ]));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function respondToAccessTokenRequest(ServerRequestInterface $request, ResponseTypeInterface $responseType, DateInterval $accessTokenTTL) : ResponseTypeInterface
+    {
+
     }
 
 }

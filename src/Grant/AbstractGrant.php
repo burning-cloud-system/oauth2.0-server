@@ -99,6 +99,11 @@ abstract class AbstractGrant implements GrantTypeInterface
         return $client;
     }
 
+    protected function getClientCredentials(ServerRequestInterface $request)
+    {
+
+    }
+
     /**
      * Set scope model.
      * 
@@ -266,7 +271,18 @@ abstract class AbstractGrant implements GrantTypeInterface
     /**
      * {@inheritDoc}
      */
-    public function validateRequest(ServerRequestInterface $request) : AuthorizationRequest
+    public function canRespondToAuthorizationRequest(ServerRequestInterface $request) : bool
+    {
+        $params = $request->getQueryParams();
+        return (array_key_exists('response_type', $params)
+                && $params['response_type'] === $this->getResponseType()
+                && isset($params['client_id']));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function validateAuthorizationRequest(ServerRequestInterface $request) : AuthorizationRequest
     {
         throw new LogicException('This grant cannot validate an authorization request');
     }
@@ -274,8 +290,18 @@ abstract class AbstractGrant implements GrantTypeInterface
     /**
      * {@inheritDoc}
      */
-    public function completeRequest(AuthorizationRequest $authorizationRequest) : ResponseTypeInterface
+    public function completeAuthorizationRequest(AuthorizationRequest $authorizationRequest) : ResponseTypeInterface
     {
         throw new LogicException('This grant cannot complete an authorization request');
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public function canRespondToAccessTokenRequest(ServerRequestInterface $request) : bool
+    {
+        $params = (array) $request->getParsedBody();
+        return (array_key_exists('grant_type', $params) 
+                && $params['grant_type'] === $this->getGrantType());
     }
 }

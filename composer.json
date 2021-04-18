@@ -25,6 +25,7 @@
     "require": {
         "php": "^7.4",
         "defuse/php-encryption": "^2.2.1",
+        "league/event": "3.0.0",
         "psr/http-message": "^1.0.1"
     },
     "require-dev": {

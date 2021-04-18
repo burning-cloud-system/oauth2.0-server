@@ -14,7 +14,7 @@ use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\InvalidClient;
 use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\InvalidRequest;
 use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\InvalidScope;
 use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\ServerError;
-use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\UnsupportedGrantType;
+use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\UnsupportedGrant;
 use Exception;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -100,17 +100,17 @@ class OAuthException extends Exception
     }
 
     /**
-     * Unsupported grant type error.
+     * Unsupported grant error.
      *
      * @return OAuthException
      */
-    public static function unsupportedGrantType() : OAuthException
+    public static function unsupportedGrant() : OAuthException
     {
         $hint = 'Check that all required parameters have been provided';
-        return new static(UnsupportedGrantType::Message,
-                          UnsupportedGrantType::Code,
-                          UnsupportedGrantType::ErrorType,
-                          UnsupportedGrantType::HttpStatusCode,
+        return new static(UnsupportedGrant::Message,
+                          UnsupportedGrant::Code,
+                          UnsupportedGrant::ErrorType,
+                          UnsupportedGrant::HttpStatusCode,
                           $hint);
     }
 

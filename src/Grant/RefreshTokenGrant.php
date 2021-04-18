@@ -1,7 +1,7 @@
 <?php
 /**
  * @author Burning Cloud System <package@burning-cloud.net>
- * @copyright Copyright (c) 2020-2021 Burning Cloud System.
+ * @copyright Copyright (c) 2020-2010 Burning Cloud System.
  * @license http://mit-license.org/
  * 
  * @link https://github.com/burning-cloud-system/oauth2.0-server
@@ -13,31 +13,27 @@ use BurningCloudSystem\OAuth2\Server\Crypt\CryptKey;
 use BurningCloudSystem\OAuth2\Server\Exception\NotImplementedException;
 use BurningCloudSystem\OAuth2\Server\Models\AccessTokenModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\ClientModelInterface;
-use BurningCloudSystem\OAuth2\Server\Models\RefreshTokenModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\ScopeModelInterface;
-use BurningCloudSystem\OAuth2\Server\Models\UserModelInterface;
 use BurningCloudSystem\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
-use DateInterval;
 use Defuse\Crypto\Key;
 use Psr\Http\Message\ServerRequestInterface;
 
-class PasswordGrant extends AbstractGrant implements GrantInterface
+class RefreshTokenGrant extends AbstractGrant implements GrantInterface
 {
     /**
-     * construct
+     * construct.
      *
      * @param string $privateKey
      * @param string $encryptionKey
-     * @param UserModelInterface $userModel
-     * @param RefreshTokenModelInterface $refreshTokenModel
+     * @param ClientModelInterface $clientModel
+     * @param ScopeModelInterface $scopeModel
+     * @param AccessTokenModelInterface $accessTokenModel
      */
     public function __construct(string $privateKey,
                                 string $encryptionKey,
                                 ClientModelInterface $clientModel,
                                 ScopeModelInterface $scopeModel,
-                                AccessTokenModelInterface $accessTokenModel,
-                                UserModelInterface $userModel,
-                                RefreshTokenModelInterface $refreshTokenModel)
+                                AccessTokenModelInterface $accessTokenModel)
     {
         
     }
@@ -49,7 +45,7 @@ class PasswordGrant extends AbstractGrant implements GrantInterface
      */
     public function getIdentifier(): string
     {
-        return 'password';
+        return 'refresh_token';
     }
 
     /**
@@ -59,7 +55,7 @@ class PasswordGrant extends AbstractGrant implements GrantInterface
      */
     public function getGrantType(): ?string
     {
-        return 'password';
+        return 'refresh_token';
     }
 
     /**

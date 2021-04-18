@@ -9,27 +9,24 @@
 
 namespace BurningCloudSystem\OAuth2\Server\Models;
 
-use BurningCloudSystem\OAuth2\Server\Entities\AuthCodeEntityInterface;
+use BurningCloudSystem\OAuth2\Server\Entities\AuthorizationCodeEntityInterface;
 
-interface AuthCodeModelInterface
+interface AuthorizationCodeModelInterface
 {
     /**
      * Creates a new AuthCode
      *
-     * @return AuthCodeEntityInterface
+     * @return AuthorizationCodeEntityInterface
      */
-    public function getNewAuthCode() : AuthCodeEntityInterface;
+    public function getNewAuthorizationCode() : AuthorizationCodeEntityInterface;
 
     /**
      * Persists a new auth code to permanent storage.
      *
-     * @param AuthCodeEntityInterface $authCodeEntity
-     * 
-     * 
-     * 
+     * @param AuthorizationCodeEntityInterface $authorizationCodeEntity
      * @return void
      */
-    public function persistNewAuthCode(AuthCodeEntityInterface $authCodeEntity) : void;
+    public function persistNewAuthorizationCode(AuthorizationCodeEntityInterface $authorizationCodeEntity) : void;
 
     /**
      * Revoke an auth code.

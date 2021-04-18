@@ -35,6 +35,11 @@ trait CryptTrait
                 return Crypto::encrypt($unencryptedData, $this->encryptionKey);
             }
 
+            if (is_string($this->encryptionKey)) 
+            {
+                return Crypto::encryptWithPassword($unencryptedData, $this->encryptionKey);
+            }
+
             throw new LogicException('Encryption key not set when attempting to encrypt');
         } 
         catch(Exception $e)
@@ -57,6 +62,11 @@ trait CryptTrait
                 return Crypto::decrypt($encryptedData, $this->encryptionKey);
             }
 
+            if (is_string($this->encryptionKey)) 
+            {
+                return Crypto::decryptWithPassword($encryptedData, $this->encryptionKey);
+            }
+
             throw new LogicException('Encryption key not set when attempting to decrypt');
         } 
         catch(Exception $e)
@@ -68,10 +78,10 @@ trait CryptTrait
     /**
      * Set the encryption key.
      *
-     * @param Key $key
+     * @param string|Key $key
      * @return void
      */
-    public function setEncryptionKey(Key $key = null) : void
+    public function setEncryptionKey($key) : void
     {
         $this->encryptionKey = $key;
     }

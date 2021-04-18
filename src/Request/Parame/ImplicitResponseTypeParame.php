@@ -1,14 +1,15 @@
 <?php
 /**
  * @author Burning Cloud System <package@burning-cloud.net>
- * @copyright Copyright (c) 2020-2010 Burning Cloud System.
+ * @copyright Copyright (c) 2020-2021 Burning Cloud System.
  * @license http://mit-license.org/
  * 
  * @link https://github.com/burning-cloud-system/oauth2.0-server
  */
 
-namespace BurningCloudSystem\OAuth2\Server\Models;
+namespace BurningCloudSystem\OAuth2\Server\Request\Parame;
 
-interface RefreshTokenModelInterface extends ModelInterface
+class ImplicitResponseTypeParame extends ResponseTypeParame
 {
+    
 }

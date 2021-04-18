@@ -9,7 +9,7 @@
 
 namespace BurningCloudSystem\OAuth2\Server\Grant;
 
-trait AuthorizeGrantTrait
+abstract class AbstractAuthorizationCodeGrant extends AbstractGrant
 {
     /**
      * Make redirect uri

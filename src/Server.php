@@ -1,7 +1,7 @@
 <?php
 /**
  * @author Burning Cloud System <package@burning-cloud.net>
- * @copyright Copyright (c) 2020-2010 Burning Cloud System.
+ * @copyright Copyright (c) 2020-2021 Burning Cloud System.
  * @license http://mit-license.org/
  * 
  * @link https://github.com/burning-cloud-system/oauth2.0-server
@@ -10,12 +10,15 @@
 namespace BurningCloudSystem\OAuth2\Server;
 
 use BurningCloudSystem\OAuth2\Server\Crypt\CryptKey;
-use BurningCloudSystem\OAuth2\Server\Grant\GrantTypeInterface;
+use BurningCloudSystem\OAuth2\Server\Grant\GrantInterface;
 use BurningCloudSystem\OAuth2\Server\Models\ClientModelInterface;
 use BurningCloudSystem\OAuth2\Server\Request\AuthorizationRequest as RequestAuthorizationRequest;
 use BurningCloudSystem\OAuth2\Server\Exception\OAuthException;
 use BurningCloudSystem\OAuth2\Server\Request\AuthorizationRequest;
-use BurningCloudSystem\OAuth2\Server\Response\ResponseTypeInterface;
+use BurningCloudSystem\OAuth2\Server\ResponseTypes\AbstractResponseType;
+use BurningCloudSystem\OAuth2\Server\ResponseTypes\BearerTokenResponse;
+use BurningCloudSystem\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
+use DateInterval;
 use Defuse\Crypto\Key;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -28,11 +31,11 @@ class Server
     private ClientModelInterface $clientModel;
 
     /**
-     * Grant Types
+     * Grants
      *
-     * @var array
+     * @var GrantInterface
      */
-    protected $grantTypes = [];
+    protected $grant;
 
     /**
      * @var CryptKey
@@ -40,59 +43,83 @@ class Server
     protected CryptKey $privateKey;
 
     /**
-     * @var Key
+     * @var string|Key
      */
-    private Key $encryptionKey;
+    private $encryptionKey;
 
     /**
      * @var string|null
      */
     private ?string $defaultScope = null;
 
+    /**
+     * @var ResponseTypeInterface
+     */
+    protected ResponseTypeInterface $responseType;
 
+    /**
+     * new server instance.
+     *
+     * @param string|CryptKey $privateKey
+     * @param string|Key $encryptionKey
+     * @param ResponseTypeInterface|null $responseType
+     */
     public function __construct(
-        string $privateKey,
-        Key $encryptionKey)
+        $privateKey,
+        $encryptionKey,
+        ?ResponseTypeInterface $responseType = null)
     {
-        $this->privateKey    = new CryptKey($privateKey);
+        if ($privateKey instanceof CryptKey === false)
+        {
+            $privateKey = new CryptKey((string) $privateKey);
+        }
+        $this->privateKey    = $privateKey;
         $this->encryptionKey = $encryptionKey;
+
+        if ($responseType === null)
+        {
+            $responseType = new BearerTokenResponse();
+        }
+        else 
+        {
+            $responseType = clone $responseType;
+        }
+        $this->responseType = $responseType;
     }
 
     /**
-     * Enable a grant type on the server.
+     * Enable a grant on the server.
+     * TODO.
      *
-     * @param GrantTypeInterface $grantType
+     * @param GrantInterface $grant
      * @return void
      */
-    public function setGrantType(GrantTypeInterface $grantType) : void
+    public function setGrantType(GrantInterface $grant) : void
     {
-        $grantType->setClientModel($this->clientModel);
+        // $grant->setClientModel($this->clientModel);
+        $grant->setDefaultScope($this->defaultScope);
+        $grant->setPrivateKey($this->privateKey);
+        $grant->setEncryptionKey($this->encryptionKey);
 
-        $grantType->setDefaultScope($this->defaultScope);
-        $grantType->setPrivateKey($this->privateKey);
-        $grantType->setEncryptionKey($this->encryptionKey);
-
-        $this->grantTypes[$grantType->getIdentifier()] = $grantType;
+        $this->grant = $grant;
     }
 
     /**
-     * Validate an request
+     * Validate an authorization request
      *
      * @param ServerRequestInterface $request
-     * @throws OAuthServerException
      * @return AuthorizationRequest
+     * @throws OAuthServerException
+     * @throws OAuthException
      */
     public function validateAuthorizationRequest(ServerRequestInterface $request) : AuthorizationRequest
     {
-        foreach($this->grantTypes as $grantType) 
+        if ($this->grant instanceof GrantInterface && $this->grant->canRespondToAuthorizationRequest(($request)))
         {
-            if ($grantType instanceof GrantTypeInterface && $grantType->canRespondToAuthorizationRequest(($request)))
-            {
-                return $grantType->validateAuthorizationRequest($request);
-            }
+            return $this->grant->validateAuthorizationRequest($request);
         }
 
-        throw OAuthException::unsupportedGrantType();
+        throw OAuthException::unsupportedGrant();
     }
 
     /**
@@ -104,13 +131,13 @@ class Server
      */
     public function completeAuthorizationRequest(AuthorizationRequest $authorizationRequest, ResponseInterface $response) : ResponseInterface
     {
-        return $this->grantTypes[$authorizationRequest->getGrantTypeId()]
-                        ->completeAuthorizationRequest($authorizationRequest)
-                        ->generateHttpResponse($response);
+        return $this->grant->completeAuthorizationRequest($authorizationRequest)
+                           ->generateHttpResponse($response);
     }
 
     /**
      * Return an access token response.
+     * TODO.
      *
      * @param ServerRequestInterface $request
      * @param ResponseInterface $response
@@ -119,26 +146,39 @@ class Server
      */
     public function respondToAccessTokenRequest(ServerRequestInterface $request, ResponseInterface $response) : ResponseInterface
     {
-        foreach($this->grantTypes as $grantType)
+        if ($this->grant instanceof GrantInterface && $this->grant->canRespondToAccessTokenRequest($request))
         {
-            if ($grantType instanceof GrantTypeInterface && $grantType->canRespondToAccessTokenRequest($request))
+            $tokenResponse = $this->grant->respondToAccessTokenRequest($request, $this->getResponseType());
+            
+            if ($tokenResponse instanceof ResponseTypeInterface)
             {
-                $tokenResponse = $grantType->respondToAccessTokenRequest(
-                    $request,
-                    $this->getResponseType(),
-                    null);
-                if ($tokenResponse instanceof ResponseTypeInterface)
-                {
-                    return $tokenResponse->generateHttpResponse($response);
-                }
+                return $tokenResponse->generateHttpResponse($response);
             }
         }
+        throw OAuthException::unsupportedGrant();
+    }
 
-        throw OAuthException::unsupportedGrantType();
+    /**
+     * Get the token type that grants will return in the HTTP response.
+     *
+     * @return ResponseTypeInterface
+     */
+    protected function getResponseType() : ResponseTypeInterface
+    {
+        $responseType = $this->responseType;
+        if ($responseType instanceof AbstractResponseType)
+        {
+            $responseType->setPrivateKey($this->privateKey);
+        }
+
+        $responseType->setEncryptionKey($this->encryptionKey);
+
+        return $responseType;
     }
 
     /**
      * Set the default scope for the authorization server.
+     * TODO.
      *
      * @param string $defaultScope
      * @return void

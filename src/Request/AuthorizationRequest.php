@@ -13,7 +13,7 @@ use BurningCloudSystem\OAuth2\Server\Entities\ClientEntityInterface;
 use BurningCloudSystem\OAuth2\Server\Entities\ScopeEntityInterface;
 use BurningCloudSystem\OAuth2\Server\Entities\UserEntityInterface;
 
-class AuthorizationRequest
+trait AuthorizationRequest
 {
     /**
      * The grant type identifier

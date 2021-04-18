@@ -11,7 +11,7 @@ namespace BurningCloudSystem\OAuth2\Server\Models;
 
 use BurningCloudSystem\OAuth2\Server\Entities\ClientEntityInterface;
 
-interface ClientModelInterface
+interface ClientModelInterface extends ModelInterface
 {
     /**
      * Get a client.
@@ -20,5 +20,15 @@ interface ClientModelInterface
      * @return ClientEntityInterface
      */
     public function getClientEntity(string $clientIdentifier): ClientEntityInterface;
+
+    /**
+     * Validate a client's secret.
+     *
+     * @param string $clientIdentifier
+     * @param string|null $clientSecret
+     * @param string|null $grantType
+     * @return boolean
+     */
+    public function validateClient(string $clientIdentifier, ?string $clientSecret, ?string $grantType) : bool;
 }
 

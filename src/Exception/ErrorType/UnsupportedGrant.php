@@ -9,33 +9,33 @@
 
 namespace BurningCloudSystem\OAuth2\Server\Exception\ErrorType;
 
-class AccessAuthCodeDuplicate
+class UnsupportedGrant
 {
     /**
      * Error type
      * 
      * @var string
      */
-    public const ErrorType = 'access_authorization_code_duplicate';
+    public const ErrorType = 'unsupported_grant_type';
 
     /**
      * Error code
      * 
      * @var int
      */
-    public const Code = 99; 
+    public const Code = 2; 
 
     /**
      * Error message
      * 
      * @var string
      */
-    public const Message = 'Could not create unique access authorization code identifier';
+    public const Message = 'The authorization grant type is not supported by the authorization server.';
 
     /**
      * Error http status code
      * 
      * @var int
      */
-    public const HttpStatusCode = 500;
+    public const HttpStatusCode = 400;
 }

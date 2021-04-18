@@ -9,65 +9,75 @@
 
 namespace BurningCloudSystem\OAuth2\Server\Grant;
 
-use BurningCloudSystem\OAuth2\Server\Entities\ClientEntityInterface;
+use BurningCloudSystem\OAuth2\Server\CodeChallengeVerifiers\CodeChallengeVerifierInterface;
 use BurningCloudSystem\OAuth2\Server\Entities\UserEntityInterface;
 use BurningCloudSystem\OAuth2\Server\Request\AuthorizationRequest;
 use BurningCloudSystem\OAuth2\Server\CodeChallengeVerifiers\PlainVerifier;
 use BurningCloudSystem\OAuth2\Server\CodeChallengeVerifiers\S256Verifier;
+use BurningCloudSystem\OAuth2\Server\Event\Listener\AccessTokenIssuedInterface;
+use BurningCloudSystem\OAuth2\Server\Event\RequestEvent;
+use BurningCloudSystem\OAuth2\Server\Exception\NotImplementedException;
 use BurningCloudSystem\OAuth2\Server\Exception\OAuthException;
 use BurningCloudSystem\OAuth2\Server\Models\AccessTokenModelInterface;
-use BurningCloudSystem\OAuth2\Server\Models\AuthCodeModelInterface;
+use BurningCloudSystem\OAuth2\Server\Models\AuthorizationCodeModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\ClientModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\RefreshTokenModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\ScopeModelInterface;
-use BurningCloudSystem\OAuth2\Server\Request\Parame\AuthorizationParame;
-use BurningCloudSystem\OAuth2\Server\Response\RedirectResponse;
-use BurningCloudSystem\OAuth2\Server\Response\ResponseTypeInterface;
+use BurningCloudSystem\OAuth2\Server\Request\Parame\AuthorizationGrantTypeParame;
+use BurningCloudSystem\OAuth2\Server\Request\Parame\AuthorizationResponseTypeParame;
+use BurningCloudSystem\OAuth2\Server\ResponseTypes\RedirectResponse;
+use BurningCloudSystem\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
 use DateInterval;
-use DateTimeImmutable;
 use LogicException;
 use Psr\Http\Message\ServerRequestInterface;
 
-class AuthorizationCodeGrant extends AbstractGrant
+class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements GrantInterface
 {
-    use AuthorizeGrantTrait;
-
-    /**
-     * @var int
-     */
-    private int $identifierLength = 0;
-
-    /**
-     * @var int
-     */
-    private int $defaultIdentifierLength = 40;
+    // use AuthorizeGrantTrait;
 
     /**
      * @var DateInterval
      */
-    private DateInterval $authCodeTTL;
+    private DateInterval $authorizationCodeTTL;
 
     /**
-     * @var array
+     * @var CodeChallengeVerifierInterface[]
      */
     private array $codeChallengeVerifiers = [];
 
-    /**
-     * @var bool
-     */
-    private bool $requireCodeChallengeForPublicClients = true;
+    // /**
+    //  * @var bool
+    //  */
+    // private bool $requireCodeChallengeForPublicClients = true;
 
     /**
      * construct.
-     * 
-     * @var void
+     *
+     * @param string $privateKey
+     * @param string $encryptionKey
+     * @param ClientModelInterface $clientModel
+     * @param ScopeModelInterface $scopeModel
+     * @param AuthorizationCodeModelInterface $authorizationCodeModel
+     * @param AccessTokenModelInterface $accessTokenModel
+     * @param RefreshTokenModelInterface $refreshTokenModel
+     * @param DateInterval|null $authorizationCodeTTL
      */
-    public function __construct(string $privateKey, string $encryptionKey, 
-        ClientModelInterface $clientModel, ScopeModelInterface $scopeModel, AuthCodeModelInterface $authCodeModel, AccessTokenModelInterface $accessTokenModel, RefreshTokenModelInterface $refreshTokenModel, 
-        ?DateInterval $authCodeTTL = null)
+    public function __construct(string $privateKey, 
+                                string $encryptionKey, 
+                                ClientModelInterface $clientModel,
+                                ScopeModelInterface $scopeModel, 
+                                AuthorizationCodeModelInterface $authorizationCodeModel, 
+                                AccessTokenModelInterface $accessTokenModel, 
+                                RefreshTokenModelInterface $refreshTokenModel, 
+                                ?DateInterval $authorizationCodeTTL = null)
     {
-        $this->setAuthCodeModel($authCodeModel);
-        $this->authCodeTTL = $authCodeTTL ?? new DateInterval('PT10M');
+        parent::__construct($privateKey, $encryptionKey, $clientModel, $scopeModel, $accessTokenModel);
+
+        $this->setAuthorizationCodeModel($authorizationCodeModel);
+        $this->setRefreshTokenModel($refreshTokenModel);
+
+        $this->authorizationCodeTTL = $authorizationCodeTTL ?? new DateInterval('PT10M');
+        $this->setRefreshTokenTTL(new DateInterval('P1M'));
 
         if (in_array('sha256', hash_algos(), true))
         {
@@ -79,40 +89,19 @@ class AuthorizationCodeGrant extends AbstractGrant
     }
 
     /**
-     * Set identifier length.
-     *
-     * @param integer $identifierLength
-     * @return void
+     * {@inheritDoc}
      */
-    public function setIdentifierLength(int $identifierLength) : void
+    public function getIdentifier() : string
     {
-        $this->identifierLength = $identifierLength;
-    }
-
-    /**
-     * Get identifier length.
-     *
-     * @return integer
-     */
-    protected function getIdentifierLength(): int
-    {
-        return $this->identifierLength <= 0 ? $this->defaultIdentifierLength : $this->identifierLength;
-    }
-
-    /**
-     * Disable the requirement for a code challenge for public clients.
-     *
-     * @return void
-     */
-    public function disableRequireCodeChallengeForPublicClients() : void
-    {
-        $this->requireCodeChallengeForPublicClients = false;
+        return 'authorization_code';
     }
 
     /**
      * {@inheritDoc}
+     *
+     * @return string|null
      */
-    public function getGrantType() : string
+    public function getGrantType(): ?string
     {
         return 'authorization_code';
     }
@@ -126,88 +115,114 @@ class AuthorizationCodeGrant extends AbstractGrant
     }
 
     /**
-     * If the grant can respond to an request this method should be called to validate the parameters of
-     * the request.
+     * {@inheritDoc}
      *
-     * If the validation is successful an Request object will be returned. This object can be safely
-     * serialized in a user's session, and can be used during user authentication and authorization.
+     * @return string
+     */
+    public function getResponseTypeParameClassName(): string
+    {
+        return AuthorizationResponseTypeParame::class;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return string
+     */
+    public function getGrantTypeParameClassName(): string
+    {
+        return AuthorizationGrantTypeParame::class;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return AuthorizationResponseTypeParame
+     */
+    public function getResponseTypeParame() : AuthorizationResponseTypeParame
+    {
+        return parent::getResponseTypeParame();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return AuthorizationGrantTypeParame
+     */
+    public function getGrantTypeParame() : AuthorizationGrantTypeParame
+    {
+        return parent::getGrantTypeParame();
+    }
+
+    // /**
+    //  * Disable the requirement for a code challenge for public clients.
+    //  *
+    //  * @return void
+    //  */
+    // public function disableRequireCodeChallengeForPublicClients() : void
+    // {
+    //     $this->requireCodeChallengeForPublicClients = false;
+    // }
+
+    /**
+     * {@inheritDoc}
      *
      * @param ServerRequestInterface $request
-     * 
-     * @throws OAuthException
-     *
      * @return AuthorizationRequest
+     * @throws OAuthException
      */
     public function validateAuthorizationRequest(ServerRequestInterface $request) : AuthorizationRequest
     {
-        $authorizationParame = new AuthorizationParame();
-        $authorizationParame->bindParame($request);
-
-        // check client
-        if ($authorizationParame->clientId === null) 
+        if (is_null($this->getResponseTypeParame()->clientId))
         {
-            throw OAuthException::invalidRequest(AuthorizationParame::CLIENT_ID);
-        }
-        $client = $this->getClientEntity($authorizationParame->clientId);
-        if ($client == null || $client instanceof ClientEntityInterface === false)
-        {
-            throw OAuthException::invalidClient($request);
+            throw OAuthException::invalidRequest(AuthorizationResponseTypeParame::CLIENT_ID);
         }
 
-        // check redirect uri
-        if ($authorizationParame->redirectUri !== null)
-        {
-            $this->validateRedirectUri($authorizationParame->redirectUri, $client, $request);
-        } elseif (empty($client->getRedirectUri()))
-        {
-            throw OAuthException::invalidClient($request);
-        }
-        $authorizationParame->redirectUri ?? $client->getRedirectUri();
+        $client = $this->getClientEntity($this->getResponseTypeParame()->clientId, $request);
 
-        (count($authorizationParame->scopes) === 0) 
-            && !is_null($this->defaultScope) 
-            && ($authorizationParame->scopes[] = $this->defaultScope);
-        $scopes = $this->validateScopes($authorizationParame->scopes, $authorizationParame->redirectUri);
+        $redirectUri = $this->getResponseTypeParame()->redirectUri;
+        $this->validateRedirectUri($redirectUri, $client, $request);
+        $redirectUri = $redirectUri ?? $client->getRedirectUri();
 
-        if ($authorizationParame->codeChallenge !== null) 
+        $state = $this->getResponseTypeParame()->state;
+        $scopes = $this->validateScopes($this->getResponseTypeParame()->scopes, $redirectUri);
+
+        $authorizationRequest = new AuthorizationRequest();
+        $authorizationRequest->setGrantTypeId($this->getIdentifier());
+        $authorizationRequest->setClient($client);
+        $authorizationRequest->setRedirectUri($redirectUri);
+        $state !== null && $authorizationRequest->setState($state);
+        $authorizationRequest->setScopes($scopes);
+
+        if ($this->getResponseTypeParame()->codeChallenge !== null)
         {
-            if (array_key_exists($authorizationParame->codeChallengeMethod, $this->codeChallengeVerifiers) === false)
+            if (array_key_exists($this->getResponseTypeParame()->codeChallengeMethod, $this->codeChallengeVerifiers) === false)
             {
                 throw OAuthException::invalidRequest(
-                    AuthorizationParame::CODE_CHALLENGE_METHOD,
+                    AuthorizationResponseTypeParame::CODE_CHALLENGE_METHOD,
                     'Code challenge method must be one of ' . 
                         implode(', ', 
                             array_map(function ($method) { return '`'.$method.'`'; },
                                 array_keys($this->codeChallengeVerifiers))));
             }
 
-            // RFC-7636, section 4.2.
-            if (preg_match('/^[A-Za-z0-9-._~]{43,128}$/', $authorizationParame->codeChallenge) !== 1)
+            // Validate code_challenge according to RFC-7636
+            // @see: https://tools.ietf.org/html/rfc7636#section-4.2
+            if (preg_match('/^[A-Za-z0-9-._~]{43,128}$/', $this->getResponseTypeParame()->codeChallenge) !== 1)
             {
                 throw OAuthException::invalidRequest(
-                    AuthorizationParame::CODE_CHALLENGE,
+                    AuthorizationResponseTypeParame::CODE_CHALLENGE,
                     'Code challenge must follow the specifications of RFC-7636.');
             }
-        } 
+
+            $authorizationRequest->setCodeChallenge($this->getResponseTypeParame()->codeChallenge);
+            $authorizationRequest->setCodeChallengMethod($this->getResponseTypeParame()->codeChallengeMethod);
+        }
         elseif ($this->requireCodeChallengeForPublicClients && !$client->isConfidential())
         {
             throw OAuthException::invalidRequest(
-                AuthorizationParame::CODE_CHALLENGE,
+                AuthorizationResponseTypeParame::CODE_CHALLENGE,
                 'Code challenge must be provided for public clients');
-        }
-
-        $authorizationRequest = new AuthorizationRequest();
-        $authorizationRequest->setGrantTypeId($this->getGrantType());
-        $authorizationRequest->setClient($client);
-        $authorizationRequest->setRedirectUri($authorizationParame->redirectUri);
-        if ($authorizationParame->state !== null) {
-            $authorizationRequest->setState($authorizationParame->state);
-        }
-        $authorizationRequest->setScopes($scopes);
-        if ($authorizationParame->codeChallenge !== null)
-        {
-            $authorizationRequest->setCodeChallenge($authorizationParame->codeChallenge);
-            $authorizationRequest->setCodeChallengMethod($authorizationParame->codeChallengeMethod);
         }
 
         return $authorizationRequest;
@@ -218,6 +233,8 @@ class AuthorizationCodeGrant extends AbstractGrant
      *
      * @param AuthorizationRequest $authorizationRequest
      * @return ResponseTypeInterface
+     * @throws OAuthException
+     
      */
     public function completeAuthorizationRequest(AuthorizationRequest $authorizationRequest) : ResponseTypeInterface
     {
@@ -226,24 +243,24 @@ class AuthorizationCodeGrant extends AbstractGrant
             throw new LogicException('An instance of UserEntityInterface should be set on the AuthorizationRequest');
         }
 
-        $finalRedirectUri = $authorizationRequest->getRedirectUri();
+        $redirectUri = $authorizationRequest->getRedirectUri();
 
         if ($authorizationRequest->isAuthorizationApproved() === true)
         {
-            $authCode = $this->issueAuthCode(
-                            $this->authCodeTTL,
-                            $authorizationRequest->getClient(),
-                            $authorizationRequest->getUser()->getIdentfier(),
-                            $authorizationRequest->getRedirectUri(),
-                            $authorizationRequest->getScopes());
+            $authorizationCode = $this->issueAuthorizationCode(
+                                            $this->authorizationCodeTTL,
+                                            $authorizationRequest->getClient(),
+                                            $authorizationRequest->getUser()->getIdentfier(),
+                                            $authorizationRequest->getRedirectUri(),
+                                            $authorizationRequest->getScopes());
 
             $payload = [
-                'client_id'             => $authCode->getClient()->getIdentfier(),
-                'redirect_uri'          => $authCode->getRedirectUri(),
-                'auth_code_id'          => $authCode->getIdentifier(),
-                'scopes'                => $authCode->getScopes(),
-                'user_id'               => $authCode->getUserIdentifier(),
-                'expire_time'           => (new DateTimeImmutable())->add($this->authCodeTTL)->getTimestamp(),
+                'authorization_code_id' => $authorizationCode->getIdentifier(),
+                'client_id'             => $authorizationCode->getClient()->getIdentifier(),
+                'user_id'               => $authorizationCode->getUserIdentifier(),
+                'redirect_uri'          => $authorizationCode->getRedirectUri(),
+                'scopes'                => $authorizationCode->getScopes(),
+                'expire_time'           => $authorizationCode->getExpiryDateTime()->getTimestamp(),
                 'code_challenge'        => $authorizationRequest->getCodeChallenge(),
                 'code_challenge_method' => $authorizationRequest->getCodeChallengeMethod(),
             ];
@@ -258,7 +275,7 @@ class AuthorizationCodeGrant extends AbstractGrant
             $response = new RedirectResponse();
             $response->setRedirectUri(
                 $this->makeRedirectUri(
-                    $finalRedirectUri, [
+                    $redirectUri, [
                         'code'  => $this->encrypt($jsonPayload),
                         'state' => $authorizationRequest->getState()
                     ]));
@@ -269,15 +286,67 @@ class AuthorizationCodeGrant extends AbstractGrant
         throw OAuthException::accessDenied(
             'The user denied the request',
             $this->makeRedirectUri(
-                $finalRedirectUri,
+                $redirectUri,
                 [ 'state' => $authorizationRequest->getState() ]));
     }
 
     /**
      * {@inheritDoc}
+     *
+     * @param ServerRequestInterface $request
+     * @return void
+     * @throws OAuthException
      */
-    public function respondToAccessTokenRequest(ServerRequestInterface $request, ResponseTypeInterface $responseType, DateInterval $accessTokenTTL) : ResponseTypeInterface
+    public function validateAccessTokenRequest(ServerRequestInterface $request): void
     {
+
+        $encryptedAuthorizationCode = $this->getGrantTypeParame()->code;
+        if ($encryptedAuthorizationCode === null)
+        {
+            throw OAuthException::invalidRequest('code');
+        }
+
+        try {
+            $authorizationCodePayload = json_decode($this->decrypt($encryptedAuthorizationCode));
+
+            // $this->validateAuthorizationCode($authCodePayload, $client, $request);
+
+            $scopes = $this->scopeModel->finalizeScopes();
+
+        } 
+        catch (LogicException $e) 
+        {
+
+        }
+
+
+        throw new NotImplementedException();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return ResponseTypeInterface
+     * @throws OAuthException
+     */
+    public function respondToAccessTokenRequest(ServerRequestInterface $request, ResponseTypeInterface $responseType): ResponseTypeInterface
+    {
+        $client = $this->getClientEntity($this->getGrantTypeParame()->clientId, $request);
+
+        // Only validate the client if it is confidential
+        if ($client->isConfidential())
+        {
+
+        }
+
+
+        $client = null;
+        $authCodePayload = null;
+        $scopes = null;
+
+        $accessToken = $this->issueAccessToken($this->accessTokenTTL, $client, $authCodePayload->user_id, $scopes);
+        $this->eventDispatcher()->dispatch(new RequestEvent(AccessTokenIssuedInterface::EVENT_NAME, $request));
+
 
     }
 

@@ -13,6 +13,20 @@ use Psr\Http\Message\ServerRequestInterface;
 
 trait RequestParameterTrait
  {
+     /**
+      * Retrieve query string parameter.
+      *
+      * @param string $parameter
+      * @param ServerRequestInterface $request
+      * @param [type] $default
+      * @param boolean $trim
+      * @return void
+      */
+     protected function getRequestParameter(string $parameter, ServerRequestInterface $request, $default = null, $trim = true)
+     {
+         return $this->getValueToParams($request->getParsedBody(), $parameter, $default);
+     }
+
     /**
      * Retrieve query string parameter.
      *
@@ -22,7 +36,7 @@ trait RequestParameterTrait
      *
      * @return null|string
      */
-    protected function getQueryStringParameter($parameter, ServerRequestInterface $request, $default = null, $trim = true)
+    protected function getQueryStringParameter(string $parameter, ServerRequestInterface $request, $default = null, $trim = true)
     {
         return $this->getValueToParams($request->getQueryParams(), $parameter, $default);
     }
@@ -36,7 +50,7 @@ trait RequestParameterTrait
      *
      * @return null|string
      */
-    protected function getServerParameter($parameter, ServerRequestInterface $request, $default = null)
+    protected function getServerParameter(string $parameter, ServerRequestInterface $request, $default = null)
     {
         return $this->getValueToParams($request->getServerParams(), $parameter, $default);
     }

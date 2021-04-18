@@ -16,7 +16,7 @@ interface ClientEntityInterface
      *
      * @return string
      */
-    public function getIdentfier() : string;
+    public function getIdentifier() : string;
 
     /**
      * Get the client's name.
@@ -28,9 +28,9 @@ interface ClientEntityInterface
     /**
      * Returns the registered redirect URI.
      *
-     * @return string|null
+     * @return string
      */
-    public function getRedirectUri() : ?string;
+    public function getRedirectUri() : string;
 
     /**
      * Returns true if the client is confidential.

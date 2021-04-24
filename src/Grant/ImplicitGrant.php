@@ -1,7 +1,7 @@
 <?php
 /**
  * @author Burning Cloud System <package@burning-cloud.net>
- * @copyright Copyright (c) 2020-2010 Burning Cloud System.
+ * @copyright Copyright (c) 2020-2021 Burning Cloud System.
  * @license http://mit-license.org/
  * 
  * @link https://github.com/burning-cloud-system/oauth2.0-server
@@ -15,13 +15,20 @@ use BurningCloudSystem\OAuth2\Server\Exception\OAuthException;
 use BurningCloudSystem\OAuth2\Server\Models\AccessTokenModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\ClientModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\ScopeModelInterface;
+use BurningCloudSystem\OAuth2\Server\Request\AuthorizationRequest;
+use BurningCloudSystem\OAuth2\Server\Request\Parame\ImplicitResponseTypeParame;
 use BurningCloudSystem\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
 use DateInterval;
-use Defuse\Crypto\Key;
+use LogicException;
 use Psr\Http\Message\ServerRequestInterface;
 
 class ImplicitGrant extends AbstractAuthorizationCodeGrant implements GrantInterface 
 {
+    /**
+     * @var string
+     */
+    private string $queryDelimiter;
+
     /**
      * construct
      *
@@ -29,19 +36,31 @@ class ImplicitGrant extends AbstractAuthorizationCodeGrant implements GrantInter
      * @param string $encryptionKey
      * @param ClientModelInterface $clientModel
      * @param ScopeModelInterface $scopeModel
-     * @param AccessTokenModelInterface $accessTokenModel
-     * @param DateInterval|null $accessTokenTTL
      * @param string $queryDelimiter
      */
     public function __construct(string $privateKey,
                                 string $encryptionKey,
                                 ClientModelInterface $clientModel,
                                 ScopeModelInterface $scopeModel,
-                                AccessTokenModelInterface $accessTokenModel,
-                                ?DateInterval $accessTokenTTL,
                                 string $queryDelimiter = '*')
     {
-        
+        parent::__construct($privateKey, $encryptionKey, $clientModel, $scopeModel);
+
+        $this->queryDelimiter = $queryDelimiter;
+    }
+
+    /**
+     * Set token model.
+     *
+     * @param AccessTokenModelInterface $accessTokenModel
+     * @param DateInterval|null $accessTokenTTL
+     * @return void
+     */
+    public function setTokenModel(AccessTokenModelInterface $accessTokenModel, 
+                                  ?DateInterval $accessTokenTTL = null)
+    {
+        $this->setAccessTokenModel($accessTokenModel);
+        $this->setAccessTokenTTL($accessTokenTTL ?? new DateInterval('PT1H'));
     }
 
     /**
@@ -77,66 +96,41 @@ class ImplicitGrant extends AbstractAuthorizationCodeGrant implements GrantInter
     /**
      * {@inheritDoc}
      *
-     * @param ClientModelInterface $clientModel
-     * @return void
+     * @return string
      */
-    public function setClientModel(ClientModelInterface $clientModel): void
+    public function getResponseTypeParameClassName(): string
     {
-        throw new NotImplementedException();
+        return ImplicitResponseTypeParame::class;
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param string $defaultScope
-     * @return void
+     * @return string
      */
-    public function setDefaultScope(string $defaultScope): void
+    public function getGrantTypeParameClassName(): string
     {
-        throw new NotImplementedException();
+        throw new LogicException('This grant cannot grant type parame.');
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param CryptKey $privateKey
-     * @return void
+     * @return ImplicitResponseTypeParame
      */
-    public function setPrivateKey(CryptKey $privateKey): void
+    public function getResponseTypeParame() : ImplicitResponseTypeParame
     {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param Key|null $key
-     * @return void
-     */
-    public function setEncryptionKey(?Key $key = null): void
-    {
-        throw new NotImplementedException();
+        return parent::getResponseTypeParame();
     }
 
     /**
      * {@inheritDoc}
      *
      * @param ServerRequestInterface $request
-     * @return boolean
-     */
-    public function canRespondToAuthorizationRequest(ServerRequestInterface $request): bool
-    {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param ServerRequestInterface $request
-     * @return void
+     * @return AuthorizationRequest
      * @throws OAuthException
      */
-    public function validateAuthorizationRequest(ServerRequestInterface $request): void
+    public function validateAuthorizationRequest(ServerRequestInterface $request): AuthorizationRequest
     {
         throw new NotImplementedException();
     }
@@ -147,7 +141,7 @@ class ImplicitGrant extends AbstractAuthorizationCodeGrant implements GrantInter
      * @return ResponseTypeInterface
      * @throws OAuthException
      */
-    public function completeAuthorizationRequest(): ResponseTypeInterface
+    public function completeAuthorizationRequest(AuthorizationRequest $authorizationRequest): ResponseTypeInterface
     {
         throw new NotImplementedException();
     }
@@ -157,34 +151,10 @@ class ImplicitGrant extends AbstractAuthorizationCodeGrant implements GrantInter
      *
      * @param ServerRequestInterface $request
      * @return boolean
-     * @throws OAuthException
      */
     public function canRespondToAccessTokenRequest(ServerRequestInterface $request): bool
     {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param ServerRequestInterface $request
-     * @return void
-     * @throws OAuthException
-     */
-    public function validateAccessTokenRequest(ServerRequestInterface $request): void
-    {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return ResponseTypeInterface
-     * @throws OAuthException
-     */
-    public function respondToAccessTokenRequest(): ResponseTypeInterface
-    {
-        throw new NotImplementedException();
+        return false;
     }
 }
 

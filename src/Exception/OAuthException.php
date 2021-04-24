@@ -11,6 +11,7 @@ namespace BurningCloudSystem\OAuth2\Server\Exception;
 
 use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\AccessDenied;
 use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\InvalidClient;
+use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\InvalidGrant;
 use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\InvalidRequest;
 use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\InvalidScope;
 use BurningCloudSystem\OAuth2\Server\Exception\ErrorType\ServerError;
@@ -183,6 +184,21 @@ class OAuthException extends Exception
                           AccessDenied::ErrorType,
                           AccessDenied::HttpStatusCode,
                           $hint, $redirectUri, $previous);
+    }
+
+    /**
+     * Invalid Grant
+     *
+     * @param string $hint
+     * @return OAuthException
+     */
+    public static function invalidGrant(string $hint = '') : OAuthException
+    {
+        return new static(InvalidGrant::Message,
+                          InvalidGrant::Code,
+                          InvalidGrant::ErrorType,
+                          InvalidGrant::HttpStatusCode,
+                          $hint);
     }
 
     /**

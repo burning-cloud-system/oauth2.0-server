@@ -11,7 +11,7 @@ namespace BurningCloudSystem\OAuth2\Server\ResponseTypes;
 
 use Psr\Http\Message\ResponseInterface;
 
-class RedirectResponse implements AbstractResponseType
+class RedirectResponse implements ResponseTypeInterface
 {
     /**
      * @var string

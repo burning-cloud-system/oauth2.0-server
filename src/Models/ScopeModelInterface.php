@@ -30,8 +30,8 @@ interface ScopeModelInterface
      * @param string $grantType
      * @param ClientEntityInterface $client
      * @param string|null $userIdentifier
-     * @return void
+     * @return ScopeEntityInterface[]
      */
-    public function finalizeScopes(array $scopes, string $grantType, ClientEntityInterface $client, ?string $userIdentifier = null);
+    public function finalizeScopes(array $scopes, string $grantType, ClientEntityInterface $client, ?string $userIdentifier = null) : array;
 }
 

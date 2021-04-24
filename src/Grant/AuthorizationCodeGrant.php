@@ -1,7 +1,7 @@
 <?php
 /**
  * @author Burning Cloud System <package@burning-cloud.net>
- * @copyright Copyright (c) 2020 Burning Cloud System.
+ * @copyright Copyright (c) 2020-2021 Burning Cloud System.
  * @license http://mit-license.org/
  * 
  * @link https://github.com/burning-cloud-system/oauth2.0-server
@@ -14,9 +14,10 @@ use BurningCloudSystem\OAuth2\Server\Entities\UserEntityInterface;
 use BurningCloudSystem\OAuth2\Server\Request\AuthorizationRequest;
 use BurningCloudSystem\OAuth2\Server\CodeChallengeVerifiers\PlainVerifier;
 use BurningCloudSystem\OAuth2\Server\CodeChallengeVerifiers\S256Verifier;
+use BurningCloudSystem\OAuth2\Server\Entities\ClientEntityInterface;
 use BurningCloudSystem\OAuth2\Server\Event\Listener\AccessTokenIssuedInterface;
+use BurningCloudSystem\OAuth2\Server\Event\Listener\RefreshTokenIssuedInterface;
 use BurningCloudSystem\OAuth2\Server\Event\RequestEvent;
-use BurningCloudSystem\OAuth2\Server\Exception\NotImplementedException;
 use BurningCloudSystem\OAuth2\Server\Exception\OAuthException;
 use BurningCloudSystem\OAuth2\Server\Models\AccessTokenModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\AuthorizationCodeModelInterface;
@@ -45,10 +46,10 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
      */
     private array $codeChallengeVerifiers = [];
 
-    // /**
-    //  * @var bool
-    //  */
-    // private bool $requireCodeChallengeForPublicClients = true;
+    /**
+     * @var bool
+     */
+    private bool $requireCodeChallengeForPublicClients = true;
 
     /**
      * construct.
@@ -58,8 +59,6 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
      * @param ClientModelInterface $clientModel
      * @param ScopeModelInterface $scopeModel
      * @param AuthorizationCodeModelInterface $authorizationCodeModel
-     * @param AccessTokenModelInterface $accessTokenModel
-     * @param RefreshTokenModelInterface $refreshTokenModel
      * @param DateInterval|null $authorizationCodeTTL
      */
     public function __construct(string $privateKey, 
@@ -67,17 +66,12 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
                                 ClientModelInterface $clientModel,
                                 ScopeModelInterface $scopeModel, 
                                 AuthorizationCodeModelInterface $authorizationCodeModel, 
-                                AccessTokenModelInterface $accessTokenModel, 
-                                RefreshTokenModelInterface $refreshTokenModel, 
                                 ?DateInterval $authorizationCodeTTL = null)
     {
-        parent::__construct($privateKey, $encryptionKey, $clientModel, $scopeModel, $accessTokenModel);
+        parent::__construct($privateKey, $encryptionKey, $clientModel, $scopeModel);
 
         $this->setAuthorizationCodeModel($authorizationCodeModel);
-        $this->setRefreshTokenModel($refreshTokenModel);
-
         $this->authorizationCodeTTL = $authorizationCodeTTL ?? new DateInterval('PT10M');
-        $this->setRefreshTokenTTL(new DateInterval('P1M'));
 
         if (in_array('sha256', hash_algos(), true))
         {
@@ -86,6 +80,26 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
         }
         $plain = new PlainVerifier();
         $this->codeChallengeVerifiers[$plain->getMethod()] = $plain;
+    }
+
+    /**
+     * Set token model.
+     *
+     * @param AccessTokenModelInterface $accessTokenModel
+     * @param RefreshTokenModelInterface $refreshTokenModel
+     * @param DateInterval|null $accessTokenTTL
+     * @param DateInterval|null $refreshTokenTTL
+     * @return void
+     */
+    public function setTokenModel(AccessTokenModelInterface $accessTokenModel, 
+                                  RefreshTokenModelInterface $refreshTokenModel, 
+                                  ?DateInterval $accessTokenTTL = null,
+                                  ?DateInterval $refreshTokenTTL = null) : void
+    {
+        $this->setAccessTokenModel($accessTokenModel);
+        $this->setRefreshTokenModel($refreshTokenModel);
+        $this->setAccessTokenTTL($accessTokenTTL ?? new DateInterval('PT1H'));
+        $this->setRefreshTokenTTL($refreshTokenTTL ?? new DateInterval('P1M'));
     }
 
     /**
@@ -154,15 +168,15 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
         return parent::getGrantTypeParame();
     }
 
-    // /**
-    //  * Disable the requirement for a code challenge for public clients.
-    //  *
-    //  * @return void
-    //  */
-    // public function disableRequireCodeChallengeForPublicClients() : void
-    // {
-    //     $this->requireCodeChallengeForPublicClients = false;
-    // }
+    /**
+     * Disable the requirement for a code challenge for public clients.
+     *
+     * @return void
+     */
+    public function disableRequireCodeChallengeForPublicClients() : void
+    {
+        $this->requireCodeChallengeForPublicClients = false;
+    }
 
     /**
      * {@inheritDoc}
@@ -294,40 +308,8 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
      * {@inheritDoc}
      *
      * @param ServerRequestInterface $request
-     * @return void
-     * @throws OAuthException
-     */
-    public function validateAccessTokenRequest(ServerRequestInterface $request): void
-    {
-
-        $encryptedAuthorizationCode = $this->getGrantTypeParame()->code;
-        if ($encryptedAuthorizationCode === null)
-        {
-            throw OAuthException::invalidRequest('code');
-        }
-
-        try {
-            $authorizationCodePayload = json_decode($this->decrypt($encryptedAuthorizationCode));
-
-            // $this->validateAuthorizationCode($authCodePayload, $client, $request);
-
-            $scopes = $this->scopeModel->finalizeScopes();
-
-        } 
-        catch (LogicException $e) 
-        {
-
-        }
-
-
-        throw new NotImplementedException();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
+     * @param ResponseTypeInterface $responseType
      * @return ResponseTypeInterface
-     * @throws OAuthException
      */
     public function respondToAccessTokenRequest(ServerRequestInterface $request, ResponseTypeInterface $responseType): ResponseTypeInterface
     {
@@ -336,18 +318,126 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
         // Only validate the client if it is confidential
         if ($client->isConfidential())
         {
-
+            $this->validateClient($request);
         }
 
+        $encryptedAuthorizationCode = $this->getGrantTypeParame()->code;
+        if ($encryptedAuthorizationCode === null)
+        {
+            throw OAuthException::invalidRequest(AuthorizationGrantTypeParame::CODE);
+        }
 
-        $client = null;
-        $authCodePayload = null;
-        $scopes = null;
+        try {
+            $authorizationCodePayload = json_decode($this->decrypt($encryptedAuthorizationCode));
+            $this->validateAuthorizationCode($authorizationCodePayload, $client, $request);
+            $scopes = $this->scopeModel->finalizeScopes(
+                $this->validateScopes($authorizationCodePayload->scopes),
+                $this->getIdentifier(),
+                $client,
+                $authorizationCodePayload->user_id
+            );
+        } 
+        catch(LogicException $e)
+        {
+            throw OAuthException::invalidRequest(AuthorizationGrantTypeParame::CODE, 'Cannot decrypt the authorization code', $e);
+        }
 
-        $accessToken = $this->issueAccessToken($this->accessTokenTTL, $client, $authCodePayload->user_id, $scopes);
+        if (!empty($authorizationCodePayload->code_challenge))
+        {
+            $codeVerifier = $this->getGrantTypeParame()->codeVerifier;
+            if ($codeVerifier === null) 
+            {
+                throw OAuthException::invalidRequest(AuthorizationGrantTypeParame::CODE_VERIFIER);
+            }
+
+            // Validate code_verifier according to RFC-7636
+            // @see: https://tools.ietf.org/html/rfc7636#section-4.1
+            if (\preg_match('/^[A-Za-z0-9-._~]{43,128}$/', $codeVerifier) !== 1) {
+                throw OAuthException::invalidRequest(
+                    AuthorizationGrantTypeParame::CODE_VERIFIER,
+                    'Code Verifier must follow the specifications of RFC-7636.'
+                );
+            }
+
+            if (property_exists($authorizationCodePayload, 'code_challenge_method'))
+            {
+                if (isset($this->codeChallengeVerifiers[$authorizationCodePayload->code_challenge_method]))
+                {
+                    $codeChallengeVerifier = $this->codeChallengeVerifiers[$authorizationCodePayload->code_challenge_method];
+
+                    if ($codeChallengeVerifier->verifyCodeChallenge($codeVerifier, $authorizationCodePayload->code_challenge) === false)
+                    {
+                        throw OAuthException::invalidGrant('Failed to verify `code_verifier`.');
+                    }
+                }
+                else 
+                {
+                    throw OAuthException::serverError(
+                        sprintf('Unsupported code challenge method `%s`', $authorizationCodePayload->code_challenge_method)
+                    );
+                }
+            }
+        }
+
+        $accessToken = $this->issueAccessToken($this->accessTokenTTL, $client, $authorizationCodePayload->user_id, $scopes);
         $this->eventDispatcher()->dispatch(new RequestEvent(AccessTokenIssuedInterface::EVENT_NAME, $request));
+        $responseType->setAccessToken($accessToken);
 
+        $refreshToken = $this->issueRefreshToken($accessToken);
 
+        if ($refreshToken !== null)
+        {
+            $this->eventDispatcher()->dispatch(new RequestEvent(RefreshTokenIssuedInterface::EVENT_NAME, $request));
+            $responseType->setRefreshToken($refreshToken);
+        }
+
+        $this->authorizationCodeModel->revokeAuthorizationCode($authorizationCodePayload->authorization_code_id);
+
+        return $responseType;
+    }
+
+    /**
+     * Validate the authorization code.
+     *
+     * @param stdClass               $authorizationCodePayload
+     * @param ClientEntityInterface  $client
+     * @param ServerRequestInterface $request
+     */
+    private function validateAuthorizationCode(
+        $authorizationCodePayload,
+        ClientEntityInterface $client,
+        ServerRequestInterface $request
+    ) {
+        if (!\property_exists($authorizationCodePayload, 'authorization_code_id')) 
+        {
+            throw OAuthException::invalidRequest(AuthorizationGrantTypeParame::CODE, 'Authorization code malformed');
+        }
+
+        if (\time() > $authorizationCodePayload->expire_time) 
+        {
+            throw OAuthException::invalidRequest(AuthorizationGrantTypeParame::CODE, 'Authorization code has expired');
+        }
+
+        if ($this->authorizationCodeModel->isAuthorizationCodeRevoked($authorizationCodePayload->authorization_code_id) === true) {
+            throw OAuthException::invalidRequest(AuthorizationGrantTypeParame::CODE, 'Authorization code has been revoked');
+        }
+
+        if ($authorizationCodePayload->client_id !== $client->getIdentifier()) 
+        {
+            throw OAuthException::invalidRequest(AuthorizationGrantTypeParame::CODE, 'Authorization code was not issued to this client');
+        }
+
+        // The redirect URI is required in this request
+        $redirectUri = $this->getGrantTypeParame()->redirectUri;
+        if (empty($authorizationCodePayload->redirect_uri) === false && $redirectUri === null) 
+        {
+            throw OAuthException::invalidRequest(AuthorizationGrantTypeParame::REDIRECT_URI);
+        }
+
+        if ($authorizationCodePayload->redirect_uri !== $redirectUri) 
+        {
+            throw OAuthException::invalidRequest(AuthorizationGrantTypeParame::REDIRECT_URI, 'Invalid redirect URI');
+        }
     }
 
 }

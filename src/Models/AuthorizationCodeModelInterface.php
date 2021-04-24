@@ -14,14 +14,14 @@ use BurningCloudSystem\OAuth2\Server\Entities\AuthorizationCodeEntityInterface;
 interface AuthorizationCodeModelInterface
 {
     /**
-     * Creates a new AuthCode
+     * Creates a new AuthorizationCode
      *
      * @return AuthorizationCodeEntityInterface
      */
     public function getNewAuthorizationCode() : AuthorizationCodeEntityInterface;
 
     /**
-     * Persists a new auth code to permanent storage.
+     * Persists a new authorization code to permanent storage.
      *
      * @param AuthorizationCodeEntityInterface $authorizationCodeEntity
      * @return void
@@ -29,19 +29,19 @@ interface AuthorizationCodeModelInterface
     public function persistNewAuthorizationCode(AuthorizationCodeEntityInterface $authorizationCodeEntity) : void;
 
     /**
-     * Revoke an auth code.
+     * Revoke an authorization code.
      *
      * @param string $codeId
      * @return void
      */
-    public function revokeAuthCode(string $codeId) : void;
+    public function revokeAuthorizationCode(string $codeId) : void;
 
     /**
-     * Check if the auth code has been revoked.
+     * Check if the authorization code has been revoked.
      *
      * @param string $codeId
      * @return boolean
      */
-    public function isAuthCodeRevoked(string $codeId) : bool;
+    public function isAuthorizationCodeRevoked(string $codeId) : bool;
 }
 

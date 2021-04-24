@@ -11,7 +11,7 @@ namespace BurningCloudSystem\OAuth2\Server\Request\Parame;
 
 use Psr\Http\Message\ServerRequestInterface;
 
-class RefreshTokenGrantTypeParame extends ResponseTypeParame
+class RefreshTokenGrantTypeParame extends GrantTypeParame
 {
     /**
      * The refresh token

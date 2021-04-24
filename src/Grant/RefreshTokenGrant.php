@@ -1,7 +1,7 @@
 <?php
 /**
  * @author Burning Cloud System <package@burning-cloud.net>
- * @copyright Copyright (c) 2020-2010 Burning Cloud System.
+ * @copyright Copyright (c) 2020-2021 Burning Cloud System.
  * @license http://mit-license.org/
  * 
  * @link https://github.com/burning-cloud-system/oauth2.0-server
@@ -13,9 +13,13 @@ use BurningCloudSystem\OAuth2\Server\Crypt\CryptKey;
 use BurningCloudSystem\OAuth2\Server\Exception\NotImplementedException;
 use BurningCloudSystem\OAuth2\Server\Models\AccessTokenModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\ClientModelInterface;
+use BurningCloudSystem\OAuth2\Server\Models\RefreshTokenModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\ScopeModelInterface;
+use BurningCloudSystem\OAuth2\Server\Request\Parame\RefreshTokenGrantTypeParame;
 use BurningCloudSystem\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
+use DateInterval;
 use Defuse\Crypto\Key;
+use LogicException;
 use Psr\Http\Message\ServerRequestInterface;
 
 class RefreshTokenGrant extends AbstractGrant implements GrantInterface
@@ -32,10 +36,29 @@ class RefreshTokenGrant extends AbstractGrant implements GrantInterface
     public function __construct(string $privateKey,
                                 string $encryptionKey,
                                 ClientModelInterface $clientModel,
-                                ScopeModelInterface $scopeModel,
-                                AccessTokenModelInterface $accessTokenModel)
+                                ScopeModelInterface $scopeModel)
     {
-        
+        parent::__construct($privateKey, $encryptionKey, $clientModel, $scopeModel);
+    }
+
+    /**
+     * Set token model.
+     *
+     * @param AccessTokenModelInterface $accessTokenModel
+     * @param RefreshTokenModelInterface $refreshTokenModel
+     * @param DateInterval|null $accessTokenTTL
+     * @param DateInterval|null $refreshTokenTTL
+     * @return void
+     */
+    public function setTokenModel(AccessTokenModelInterface $accessTokenModel, 
+                                  RefreshTokenModelInterface $refreshTokenModel, 
+                                  ?DateInterval $accessTokenTTL = null,
+                                  ?DateInterval $refreshTokenTTL = null) : void
+    {
+        $this->setAccessTokenModel($accessTokenModel);
+        $this->setRefreshTokenModel($refreshTokenModel);
+        $this->setAccessTokenTTL($accessTokenTTL ?? new DateInterval('PT1H'));
+        $this->setRefreshTokenTTL($refreshTokenTTL ?? new DateInterval('P1M'));
     }
 
     /**
@@ -71,45 +94,31 @@ class RefreshTokenGrant extends AbstractGrant implements GrantInterface
     /**
      * {@inheritDoc}
      *
-     * @param ClientModelInterface $clientModel
-     * @return void
+     * @return string
      */
-    public function setClientModel(ClientModelInterface $clientModel): void
+    public function getResponseTypeParameClassName(): string
     {
-        throw new NotImplementedException();
+        throw new LogicException('This grant cannot response type parame.');
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param string $defaultScope
-     * @return void
+     * @return string
      */
-    public function setDefaultScope(string $defaultScope): void
+    public function getGrantTypeParameClassName(): string
     {
-        throw new NotImplementedException();
+        return RefreshTokenGrantTypeParame::class;
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param CryptKey $privateKey
-     * @return void
+     * @return RefreshTokenGrantTypeParame
      */
-    public function setPrivateKey(CryptKey $privateKey): void
+    public function getGrantTypeParame() : RefreshTokenGrantTypeParame
     {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param Key|null $key
-     * @return void
-     */
-    public function setEncryptionKey(?Key $key = null): void
-    {
-        throw new NotImplementedException();
+        return parent::getGrantTypeParame();
     }
 
     /**
@@ -127,56 +136,10 @@ class RefreshTokenGrant extends AbstractGrant implements GrantInterface
      * {@inheritDoc}
      *
      * @param ServerRequestInterface $request
-     * @return void
-     * @throws OAuthException
-     */
-    public function validateAuthorizationRequest(ServerRequestInterface $request): void
-    {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
+     * @param ResponseTypeInterface $responseType
      * @return ResponseTypeInterface
-     * @throws OAuthException
      */
-    public function completeAuthorizationRequest(): ResponseTypeInterface
-    {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param ServerRequestInterface $request
-     * @return boolean
-     * @throws OAuthException
-     */
-    public function canRespondToAccessTokenRequest(ServerRequestInterface $request): bool
-    {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param ServerRequestInterface $request
-     * @return void
-     * @throws OAuthException
-     */
-    public function validateAccessTokenRequest(ServerRequestInterface $request): void
-    {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return ResponseTypeInterface
-     * @throws OAuthException
-     */
-    public function respondToAccessTokenRequest(): ResponseTypeInterface
+    public function respondToAccessTokenRequest(ServerRequestInterface $request, ResponseTypeInterface $responseType): ResponseTypeInterface
     {
         throw new NotImplementedException();
     }

@@ -14,6 +14,7 @@ use BurningCloudSystem\OAuth2\Server\Crypt\CryptTrait;
 use BurningCloudSystem\OAuth2\Server\Entities\AccessTokenEntityInterface;
 use BurningCloudSystem\OAuth2\Server\Entities\AuthorizationCodeEntityInterface;
 use BurningCloudSystem\OAuth2\Server\Entities\ClientEntityInterface;
+use BurningCloudSystem\OAuth2\Server\Entities\RefreshTokenEntityInterface;
 use BurningCloudSystem\OAuth2\Server\Entities\ScopeEntityInterface;
 use BurningCloudSystem\OAuth2\Server\Event\Listener\ClientAuthenticationFailedInterface;
 use BurningCloudSystem\OAuth2\Server\Event\RequestEvent;
@@ -25,9 +26,11 @@ use BurningCloudSystem\OAuth2\Server\Exception\UniqueAuthorizationCodeIdentifier
 use BurningCloudSystem\OAuth2\Server\Exception\UniqueTokenIdentifierConstraintViolationException;
 use BurningCloudSystem\OAuth2\Server\Models\AccessTokenModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\RefreshTokenModelInterface;
+use BurningCloudSystem\OAuth2\Server\Models\UserModelInterface;
+use BurningCloudSystem\OAuth2\Server\Request\AuthorizationRequest;
 use BurningCloudSystem\OAuth2\Server\Request\Parame\GrantTypeParame;
 use BurningCloudSystem\OAuth2\Server\Request\Parame\ResponseTypeParame;
-
+use BurningCloudSystem\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
 use DateInterval;
 use DateTimeImmutable;
 use Error;
@@ -84,6 +87,11 @@ abstract class AbstractGrant implements GrantInterface
     protected AuthorizationCodeModelInterface $authorizationCodeModel;
 
     /**
+     * @var UserModelInterface
+     */
+    protected UserModelInterface $userModel;
+
+    /**
      * @var AccessTokenModelInterface
      */
     protected AccessTokenModelInterface $accessTokenModel;
@@ -107,21 +115,16 @@ abstract class AbstractGrant implements GrantInterface
      * @param string $encryptionKey
      * @param ClientModelInterface $clientModel
      * @param ScopeModelInterface $scopeModel
-     * @param AccessTokenModelInterface $accessTokenModel
      */
     public function __construct(string $privateKey,
                                 string $encryptionKey,
                                 ClientModelInterface $clientModel,
-                                ScopeModelInterface $scopeModel,
-                                AccessTokenModelInterface $accessTokenModel)
+                                ScopeModelInterface $scopeModel)
     {
-        $this->setAccessTokenTTL(new DateInterval('PT1H'));
-
         $this->setEncryptionKey($encryptionKey);
         $this->setPrivateKey($privateKey);
         $this->setClientModel($clientModel);
         $this->setScopeModel($scopeModel);
-        $this->setAccessTokenModel($accessTokenModel);
     }
 
     /**
@@ -226,6 +229,17 @@ abstract class AbstractGrant implements GrantInterface
     }
 
     /**
+     * Set user model.
+     *
+     * @param UserModelInterface $userModel
+     * @return void
+     */
+    public function setUserModel(UserModelInterface $userModel) : void
+    {
+        $this->userModel = $userModel;
+    }
+
+    /**
      * Set refresh token model.
      *
      * @param RefreshTokenModelInterface $refreshTokenModel
@@ -259,40 +273,6 @@ abstract class AbstractGrant implements GrantInterface
         $params = (array) $request->getQueryParams();
         return (array_key_exists(ResponseTypeParame::RESPONSE_TYPE, $params)
                 && $this->responseTypeParame->responseType === $this->getResponseType());
-    }
-
-    /**
-     * Validate redirectUri from the request.
-     *
-     * @param string|null $redirectUri
-     * @param ClientEntityInterface $client
-     * @param ServerRequestInterface $request
-     * @throws OAuthException
-     * @return void
-     */
-    protected function validateRedirectUri(?string $redirectUri, ClientEntityInterface $client, ServerRequestInterface $request) : void
-    {
-        try {
-            if ($redirectUri === null) 
-            {
-                if (empty($client->getRedirectUri()))
-                {
-                    throw new Exception();
-                }
-            }
-            else 
-            {
-                if (strcmp($client->getRedirectUri(), $redirectUri) !== 0)
-                {
-                    throw new Exception();
-                }                    
-            }
-        } 
-        catch(Exception $e) 
-        {
-            $this->eventDispatcher()->dispatch(new RequestEvent(ClientAuthenticationFailedInterface::EVENT_NAME, $request));
-            throw OAuthException::invalidClient($request);
-        }
     }
 
     /**
@@ -403,6 +383,44 @@ abstract class AbstractGrant implements GrantInterface
     }
 
     /**
+     * Issue a refresh token.
+     *
+     * @param AccessTokenEntityInterface $accessToken
+     * @return RefreshTokenEntityInterface|null
+     * @throws OAuthException
+     * @throws UniqueTokenIdentifierConstraintViolationException
+     */
+    protected function issueRefreshToken(AccessTokenEntityInterface $accessToken) : ?RefreshTokenEntityInterface
+    {
+        $refreshToken = $this->refreshTokenModel->getNewRefreshToken();
+        if ($refreshToken === null)
+        {
+            return null;
+        }
+
+        $refreshToken->setExpiryDateTime((new DateTimeImmutable())->add($this->refreshTokenTTL));
+        $refreshToken->setAccessToken($accessToken);
+
+        $maxGenerationAttempts = self::MAX_RANDOM_TOKEN_GENERATION_ATTEMPTS;
+
+        while($maxGenerationAttempts-- > 0)
+        {
+            $refreshToken->setIdentifier($this->generateUniqueIdentifier());
+            try {
+                $this->refreshTokenModel->persistNewRefreshToken($refreshToken);
+                return $refreshToken;
+            }
+            catch(UniqueTokenIdentifierConstraintViolationException $e)
+            {
+                if ($maxGenerationAttempts === 0)
+                {
+                    throw $e;
+                }
+            }
+        }
+    }
+
+    /**
      * Generate a new unique identifier.
      *
      * @param integer $length
@@ -486,7 +504,6 @@ abstract class AbstractGrant implements GrantInterface
 // Commpon.
 ///////////////////////////////////////////////
 
-
     /**
      * Get client model.
      *
@@ -514,6 +531,40 @@ abstract class AbstractGrant implements GrantInterface
         return $client;
     }
 
+    /**
+     * Validate redirectUri from the request.
+     *
+     * @param string|null $redirectUri
+     * @param ClientEntityInterface $client
+     * @param ServerRequestInterface $request
+     * @throws OAuthException
+     * @return void
+     */
+    protected function validateRedirectUri(?string $redirectUri, ClientEntityInterface $client, ServerRequestInterface $request) : void
+    {
+        try {
+            if ($redirectUri === null) 
+            {
+                if (empty($client->getRedirectUri()))
+                {
+                    throw new Exception();
+                }
+            }
+            else 
+            {
+                if (strcmp($client->getRedirectUri(), $redirectUri) !== 0)
+                {
+                    throw new Exception();
+                }                    
+            }
+        } 
+        catch(Exception $e) 
+        {
+            $this->eventDispatcher()->dispatch(new RequestEvent(ClientAuthenticationFailedInterface::EVENT_NAME, $request));
+            throw OAuthException::invalidClient($request);
+        }
+    }
+
 ///////////////////////////////////////////////
 // Access Token.
 ///////////////////////////////////////////////
@@ -533,89 +584,60 @@ abstract class AbstractGrant implements GrantInterface
                 && $this->grantTypeParame->grantType === $this->getGrantType());
     }
 
+    /**
+     * Validate the client.
+     *
+     * @param ServerRequestInterface $request
+     * @return ClientEntityInterface
+     */
     protected function validateClient(ServerRequestInterface $request) : ClientEntityInterface
     {
         $clientId = $this->getGrantTypeParame()->clientId;
         $clientSecret = $this->getGrantTypeParame()->clientSecret;
-        if ($this->clientModel->validateClient($clientId, $clientSecret, $this->getIdentifier()) === false)
+        if ($this->clientModel->validateClient($clientId, $clientSecret, $this->getGrantType()) === false)
         {
             $this->eventDispatcher()->dispatch(new RequestEvent(ClientAuthenticationFailedInterface::EVENT_NAME, $request));
 
+            throw OAuthException::invalidClient($request);
         }
+
+        $client = $this->getClientEntity($clientId, $request);
+        $redirectUri = $this->getGrantTypeParame()->redirectUri;
+        if ($redirectUri !== null)
+        {
+            $this->validateRedirectUri($redirectUri, $client, $request);
+        }
+
+        return $client;
     }
 
+///////////////////////////////////////////////
 
-    // /**
-    //  * @var int
-    //  */
-    // private int $identifierLength = 40;
+    /**
+     * {@inheritDoc}
+     */
+    public function validateAuthorizationRequest(ServerRequestInterface $request) : AuthorizationRequest
+    {
+        throw new LogicException('This grant cannot validate an authorization request');
+    }
 
+    /**
+     * {@inheritDoc}
+     */
+    public function completeAuthorizationRequest(AuthorizationRequest $authorizationRequest) : ResponseTypeInterface
+    {
+        throw new LogicException('This grant cannot complete an authorization request');
+    }
 
-
-
-
-    // /**
-    //  * Set identifier length.
-    //  *
-    //  * @param integer $identifierLength
-    //  * @return void
-    //  */
-    // public function setIdentifierLength(int $identifierLength): void
-    // {
-    //     $this->identifierLength = $identifierLength;
-    // }
-
-    // /**
-    //  * Get identifier length.
-    //  *
-    //  * @return integer
-    //  */
-    // public function getIdentifierLength(): int
-    // {
-    //     return $this->identifierLength;
-    // }
-
-
-
-
-
-
-
-
-
-    // /**
-    //  * Set default scope.
-    //  *
-    //  * @param string $scope
-    //  * @return void
-    //  */
-    // public function setDefaultScope(string $scope) : void
-    // {
-    //     $this->defaultScope = $scope;
-    // }
-
-
-
-
-
-
-
-
-    // /**
-    //  * {@inheritDoc}
-    //  */
-    // public function validateAuthorizationRequest(ServerRequestInterface $request) : AuthorizationRequest
-    // {
-    //     throw new LogicException('This grant cannot validate an authorization request');
-    // }
-
-    // /**
-    //  * {@inheritDoc}
-    //  */
-    // public function completeAuthorizationRequest(AuthorizationRequest $authorizationRequest) : ResponseTypeInterface
-    // {
-    //     throw new LogicException('This grant cannot complete an authorization request');
-    // }
-    
-
+    /**
+     * {@inheritDoc}
+     *
+     * @param ServerRequestInterface $request
+     * @param ResponseTypeInterface $responseType
+     * @return ResponseTypeInterface
+     */
+    public function respondToAccessTokenRequest(ServerRequestInterface $request, ResponseTypeInterface $responseType): ResponseTypeInterface
+    {
+        throw new LogicException('This grant does not used this method');
+    }
 }

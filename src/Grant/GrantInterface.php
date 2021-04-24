@@ -60,7 +60,7 @@ interface GrantInterface
      * serialized in a user's session, and can be used during user authentication and authorization.
      *
      * @param ServerRequestInterface $request
-     * @return void
+     * @return AuthorizationRequest
      * @throws OAuthException
      */
     public function validateAuthorizationRequest(ServerRequestInterface $request) : AuthorizationRequest;
@@ -86,18 +86,6 @@ interface GrantInterface
      * @throws OAuthException
      */
     public function canRespondToAccessTokenRequest(ServerRequestInterface $request) : bool;
-
-    /**
-     * If the grant can respond to an request this method should be called to validate the parameter of the request.
-     * 
-     * If the validation is successful an Request object will be returned. This object can be safely
-     * serialized in a user's session, and can be used during user authentication and authorization.
-     *
-     * @param ServerRequestInterface $request
-     * @return void
-     * @throws OAuthException
-     */
-    public function validateAccessTokenRequest(ServerRequestInterface $request) : void;
 
     /**
      * Respond to an incoming request.
@@ -160,10 +148,10 @@ interface GrantInterface
     /**
      * Set the path to the private key.
      *
-     * @param CryptKey $privateKey
+     * @param string|CryptKey $privateKey
      * @return void
      */
-    public function setPrivateKey(CryptKey $privateKey) : void;
+    public function setPrivateKey($privateKey) : void;
 
     /**
      * Set the encryption key.

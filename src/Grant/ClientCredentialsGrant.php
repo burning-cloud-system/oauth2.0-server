@@ -9,13 +9,17 @@
 
 namespace BurningCloudSystem\OAuth2\Server\Grant;
 
-use BurningCloudSystem\OAuth2\Server\Crypt\CryptKey;
-use BurningCloudSystem\OAuth2\Server\Exception\NotImplementedException;
+use BurningCloudSystem\OAuth2\Server\Event\Listener\AccessTokenIssuedInterface;
+use BurningCloudSystem\OAuth2\Server\Event\Listener\ClientAuthenticationFailedInterface;
+use BurningCloudSystem\OAuth2\Server\Event\RequestEvent;
+use BurningCloudSystem\OAuth2\Server\Exception\OAuthException;
 use BurningCloudSystem\OAuth2\Server\Models\AccessTokenModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\ClientModelInterface;
 use BurningCloudSystem\OAuth2\Server\Models\ScopeModelInterface;
+use BurningCloudSystem\OAuth2\Server\Request\Parame\ClientCredentialsGrantTypeParame;
 use BurningCloudSystem\OAuth2\Server\ResponseTypes\ResponseTypeInterface;
-use Defuse\Crypto\Key;
+use DateInterval;
+use LogicException;
 use Psr\Http\Message\ServerRequestInterface;
 
 class ClientCredentialsGrant extends AbstractGrant implements GrantInterface
@@ -23,12 +27,24 @@ class ClientCredentialsGrant extends AbstractGrant implements GrantInterface
     public function __construct(string $privateKey,
                                 string $encryptionKey,
                                 ClientModelInterface $clientModel,
-                                ScopeModelInterface $scopeModel,
-                                AccessTokenModelInterface $accessTokenModel)
+                                ScopeModelInterface $scopeModel)
     {
-        
+        parent::__construct($privateKey, $encryptionKey, $clientModel, $scopeModel);
     }
 
+    /**
+     * Set token model.
+     *
+     * @param AccessTokenModelInterface $accessTokenModel
+     * @param DateInterval|null $accessTokenTTL
+     * @return void
+     */
+    public function setTokenModel(AccessTokenModelInterface $accessTokenModel, 
+                                  ?DateInterval $accessTokenTTL = null) : void
+    {
+        $this->setAccessTokenModel($accessTokenModel);
+        $this->setAccessTokenTTL($accessTokenTTL ?? new DateInterval('PT1H'));
+    }
 
     /**
      * {@inheritDoc}
@@ -63,45 +79,31 @@ class ClientCredentialsGrant extends AbstractGrant implements GrantInterface
     /**
      * {@inheritDoc}
      *
-     * @param ClientModelInterface $clientModel
-     * @return void
+     * @return string
      */
-    public function setClientModel(ClientModelInterface $clientModel): void
+    public function getGrantTypeParameClassName(): string
     {
-        throw new NotImplementedException();
+        return ClientCredentialsGrantTypeParame::class;
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param string $defaultScope
-     * @return void
+     * @return string
      */
-    public function setDefaultScope(string $defaultScope): void
+    public function getResponseTypeParameClassName(): string
     {
-        throw new NotImplementedException();
+        throw new LogicException('This grant cannot response type parame.');
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param CryptKey $privateKey
-     * @return void
+     * @return ClientCredentialsGrantTypeParame
      */
-    public function setPrivateKey(CryptKey $privateKey): void
+    public function getGrantTypeParame() : ClientCredentialsGrantTypeParame
     {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param Key|null $key
-     * @return void
-     */
-    public function setEncryptionKey(?Key $key = null): void
-    {
-        throw new NotImplementedException();
+        return parent::getGrantTypeParame();
     }
 
     /**
@@ -118,58 +120,31 @@ class ClientCredentialsGrant extends AbstractGrant implements GrantInterface
     /**
      * {@inheritDoc}
      *
-     * @param ServerRequestInterface $request
-     * @return void
-     * @throws OAuthException
-     */
-    public function validateAuthorizationRequest(ServerRequestInterface $request): void
-    {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
      * @return ResponseTypeInterface
      * @throws OAuthException
      */
-    public function completeAuthorizationRequest(): ResponseTypeInterface
+    public function respondToAccessTokenRequest(ServerRequestInterface $request, ResponseTypeInterface $responseType): ResponseTypeInterface
     {
-        throw new NotImplementedException();
-    }
+        $client = $this->getClientEntity($this->getGrantTypeParame()->clientId, $request);
 
-    /**
-     * {@inheritDoc}
-     *
-     * @param ServerRequestInterface $request
-     * @return boolean
-     * @throws OAuthException
-     */
-    public function canRespondToAccessTokenRequest(ServerRequestInterface $request): bool
-    {
-        throw new NotImplementedException();
-    }
+        if (!$client->isConfidential())
+        {
+            $this->eventDispatcher()->dispatch(new RequestEvent(ClientAuthenticationFailedInterface::EVENT_NAME, $request));
+            throw OAuthException::invalidClient($request);
+        }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @param ServerRequestInterface $request
-     * @return void
-     * @throws OAuthException
-     */
-    public function validateAccessTokenRequest(ServerRequestInterface $request): void
-    {
-        throw new NotImplementedException();
-    }
+        $this->validateClient($request);
 
-    /**
-     * {@inheritDoc}
-     *
-     * @return ResponseTypeInterface
-     * @throws OAuthException
-     */
-    public function respondToAccessTokenRequest(): ResponseTypeInterface
-    {
-        throw new NotImplementedException();
+        $scopes = $this->validateScopes($this->getGrantTypeParame()->scopes);
+
+        $finalizedScopes = $this->scopeModel->finalizeScopes($scopes, $this->getIdentifier(), $client);
+
+        $accessToken = $this->issueAccessToken($this->accessTokenTTL, $client, null, $finalizedScopes);
+
+        $this->eventDispatcher()->dispatch(new RequestEvent(AccessTokenIssuedInterface::EVENT_NAME, $request));
+
+        $responseType->setAccessToken($accessToken);
+
+        return $responseType;
     }
 }

@@ -21,13 +21,6 @@ class AuthorizationGrantTypeParame extends GrantTypeParame
     public const CODE = 'code';
 
     /**
-     * The redirect URI used in the request
-     * 
-     * @var string
-     */
-    public const REDIRECT_URI = "redirect_uri";
-
-    /**
      * The code verifier
      * 
      * @var string
@@ -40,13 +33,6 @@ class AuthorizationGrantTypeParame extends GrantTypeParame
      * @var string
      */
     public string $code;
-
-    /**
-     * The redirect URI property used in the request 
-     *
-     * @var string
-     */
-    public string $redirectUri;
 
     /**
      * The code verifier property
@@ -67,7 +53,6 @@ class AuthorizationGrantTypeParame extends GrantTypeParame
 
         // set request parameter.
         $this->code         = $this->getRequestParameter(self::CODE,          $request);
-        $this->redirectUri  = $this->getRequestParameter(self::REDIRECT_URI,  $request);
         $this->codeVerifier = $this->getRequestParameter(self::CODE_VERIFIER, $request);
     }
 }

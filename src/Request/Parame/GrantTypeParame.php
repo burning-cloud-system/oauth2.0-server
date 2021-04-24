@@ -36,6 +36,13 @@ abstract class GrantTypeParame extends AbstractParame
     public const CLIENT_SECRET = 'client_secret';
 
     /**
+     * The redirect URI used in the request
+     * 
+     * @var string
+     */
+    public const REDIRECT_URI = "redirect_uri";
+
+    /**
      * The grant type property
      * 
      * @var string
@@ -53,7 +60,13 @@ abstract class GrantTypeParame extends AbstractParame
      * The client secret.
      */
     public string $clientSecret;
-
+    
+    /**
+     * The redirect URI property used in the request 
+     *
+     * @var string
+     */
+    public string $redirectUri;
 
     /**
      * {@inheritDoc}
@@ -73,6 +86,7 @@ abstract class GrantTypeParame extends AbstractParame
             throw OAuthException::invalidRequest(self::CLIENT_ID);
         }
         $this->clientSecret = $this->getRequestParameter(self::CLIENT_SECRET, $request, $basicAuthPassword);
+        $this->redirectUri  = $this->getRequestParameter(self::REDIRECT_URI,  $request);
     }
 
     /**

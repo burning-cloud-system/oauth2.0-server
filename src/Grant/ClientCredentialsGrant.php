@@ -24,12 +24,10 @@ use Psr\Http\Message\ServerRequestInterface;
 
 class ClientCredentialsGrant extends AbstractGrant implements GrantInterface
 {
-    public function __construct(string $privateKey,
-                                string $encryptionKey,
-                                ClientModelInterface $clientModel,
+    public function __construct(ClientModelInterface $clientModel,
                                 ScopeModelInterface $scopeModel)
     {
-        parent::__construct($privateKey, $encryptionKey, $clientModel, $scopeModel);
+        parent::__construct($clientModel, $scopeModel);
     }
 
     /**

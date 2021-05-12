@@ -28,18 +28,14 @@ class PasswordGrant extends AbstractGrant implements GrantInterface
     /**
      * construct
      *
-     * @param string $privateKey
-     * @param string $encryptionKey
      * @param UserModelInterface $userModel
      * @param RefreshTokenModelInterface $refreshTokenModel
      */
-    public function __construct(string $privateKey,
-                                string $encryptionKey,
-                                ClientModelInterface $clientModel,
+    public function __construct(ClientModelInterface $clientModel,
                                 ScopeModelInterface $scopeModel,
                                 UserModelInterface $userModel)
     {
-        parent::__construct($privateKey, $encryptionKey, $clientModel, $scopeModel);
+        parent::__construct($clientModel, $scopeModel);
 
         $this->setUserModel($userModel);
     }

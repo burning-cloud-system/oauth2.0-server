@@ -111,18 +111,12 @@ abstract class AbstractGrant implements GrantInterface
     /**
      * construct.
      *
-     * @param string $privateKey
-     * @param string $encryptionKey
      * @param ClientModelInterface $clientModel
      * @param ScopeModelInterface $scopeModel
      */
-    public function __construct(string $privateKey,
-                                string $encryptionKey,
-                                ClientModelInterface $clientModel,
+    public function __construct(ClientModelInterface $clientModel,
                                 ScopeModelInterface $scopeModel)
     {
-        $this->setEncryptionKey($encryptionKey);
-        $this->setPrivateKey($privateKey);
         $this->setClientModel($clientModel);
         $this->setScopeModel($scopeModel);
     }

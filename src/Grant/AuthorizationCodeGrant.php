@@ -54,21 +54,17 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
     /**
      * construct.
      *
-     * @param string $privateKey
-     * @param string $encryptionKey
      * @param ClientModelInterface $clientModel
      * @param ScopeModelInterface $scopeModel
      * @param AuthorizationCodeModelInterface $authorizationCodeModel
      * @param DateInterval|null $authorizationCodeTTL
      */
-    public function __construct(string $privateKey, 
-                                string $encryptionKey, 
-                                ClientModelInterface $clientModel,
+    public function __construct(ClientModelInterface $clientModel,
                                 ScopeModelInterface $scopeModel, 
                                 AuthorizationCodeModelInterface $authorizationCodeModel, 
                                 ?DateInterval $authorizationCodeTTL = null)
     {
-        parent::__construct($privateKey, $encryptionKey, $clientModel, $scopeModel);
+        parent::__construct($clientModel, $scopeModel);
 
         $this->setAuthorizationCodeModel($authorizationCodeModel);
         $this->authorizationCodeTTL = $authorizationCodeTTL ?? new DateInterval('PT10M');

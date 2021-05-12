@@ -27,18 +27,14 @@ class RefreshTokenGrant extends AbstractGrant implements GrantInterface
     /**
      * construct.
      *
-     * @param string $privateKey
-     * @param string $encryptionKey
      * @param ClientModelInterface $clientModel
      * @param ScopeModelInterface $scopeModel
      * @param AccessTokenModelInterface $accessTokenModel
      */
-    public function __construct(string $privateKey,
-                                string $encryptionKey,
-                                ClientModelInterface $clientModel,
+    public function __construct(ClientModelInterface $clientModel,
                                 ScopeModelInterface $scopeModel)
     {
-        parent::__construct($privateKey, $encryptionKey, $clientModel, $scopeModel);
+        parent::__construct($clientModel, $scopeModel);
     }
 
     /**

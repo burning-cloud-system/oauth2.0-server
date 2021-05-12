@@ -32,19 +32,15 @@ class ImplicitGrant extends AbstractAuthorizationCodeGrant implements GrantInter
     /**
      * construct
      *
-     * @param string $privateKey
-     * @param string $encryptionKey
      * @param ClientModelInterface $clientModel
      * @param ScopeModelInterface $scopeModel
      * @param string $queryDelimiter
      */
-    public function __construct(string $privateKey,
-                                string $encryptionKey,
-                                ClientModelInterface $clientModel,
+    public function __construct(ClientModelInterface $clientModel,
                                 ScopeModelInterface $scopeModel,
                                 string $queryDelimiter = '*')
     {
-        parent::__construct($privateKey, $encryptionKey, $clientModel, $scopeModel);
+        parent::__construct($clientModel, $scopeModel);
 
         $this->queryDelimiter = $queryDelimiter;
     }

@@ -18,8 +18,6 @@ trait CryptTrait
 {
     /**
      * @var string|Key|null
-     *
-     * @var [type]
      */
     protected $encryptionKey;
 

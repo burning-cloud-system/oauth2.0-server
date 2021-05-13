@@ -47,9 +47,9 @@ abstract class AbstractGrant implements GrantInterface
     const MAX_RANDOM_TOKEN_GENERATION_ATTEMPTS = 10;
 
     /**
-     * @var ResponseTypeParame
+     * @var ResponseTypeParame|null
      */
-    protected ResponseTypeParame $responseTypeParame;
+    protected ?ResponseTypeParame $responseTypeParame = null;
 
     /**
      * @var GrantTypeParame

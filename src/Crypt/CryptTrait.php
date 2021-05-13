@@ -16,6 +16,11 @@ use LogicException;
 
 trait CryptTrait
 {
+    /**
+     * @var string|Key|null
+     *
+     * @var [type]
+     */
     protected $encryptionKey;
 
     /**
@@ -78,10 +83,10 @@ trait CryptTrait
     /**
      * Set the encryption key.
      *
-     * @param string|Key $key
+     * @param string|Key|null $key
      * @return void
      */
-    public function setEncryptionKey($key) : void
+    public function setEncryptionKey($key = null) : void
     {
         $this->encryptionKey = $key;
     }

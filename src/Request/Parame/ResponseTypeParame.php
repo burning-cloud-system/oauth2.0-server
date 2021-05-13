@@ -9,7 +9,10 @@
 
 namespace BurningCloudSystem\OAuth2\Server\Request\Parame;
 
+use BurningCloudSystem\OAuth2\Server\Exception\OAuthException;
+use Exception;
 use Psr\Http\Message\ServerRequestInterface;
+use Throwable;
 
 abstract class ResponseTypeParame extends AbstractParame
 {
@@ -98,17 +101,58 @@ abstract class ResponseTypeParame extends AbstractParame
     public function bindParame(ServerRequestInterface $request)
     {
         // set request parameter.
-        $this->responseType  = $this->getQueryStringParameter(self::RESPONSE_TYPE,  $request);
-        $this->clientId      = $this->getQueryStringParameter(self::CLIENT_ID,      $request);
-        $this->redirectUri   = $this->getQueryStringParameter(self::REDIRECT_URI,   $request);
-        $this->scope         = $this->getQueryStringParameter(self::SCOPE,          $request);
-        $this->state         = $this->getQueryStringParameter(self::STATE,          $request);
+        try {
+            $this->responseType  = $this->getQueryStringParameter(self::RESPONSE_TYPE,  $request);
+        } catch (Throwable $e2) {
+            throw OAuthException::invalidRequest(self::RESPONSE_TYPE);
+        } catch (Exception $e) {
+            throw OAuthException::invalidRequest(self::RESPONSE_TYPE);
+        }
+
+        try {
+            $this->clientId      = $this->getQueryStringParameter(self::CLIENT_ID,      $request);
+        } catch (Throwable $e2) {
+            // throw OAuthException::invalidRequest(self::CLIENT_ID);
+        } catch (Exception $e) {
+            // throw OAuthException::invalidRequest(self::CLIENT_ID);
+        }
+
+        if (!isset($this->clientId))
+        {
+            try {
+                $this->clientId = $this->getServerParameter('PHP_AUTH_USER', $request);
+            } catch (Throwable $e2) {
+                throw OAuthException::invalidRequest(self::CLIENT_ID);
+            } catch (Exception $e) {
+                throw OAuthException::invalidRequest(self::CLIENT_ID);
+            }
+   
+        }
+
+        try {
+            $this->redirectUri   = $this->getQueryStringParameter(self::REDIRECT_URI,   $request);
+        } catch (Throwable $e2) {
+            throw OAuthException::invalidRequest(self::REDIRECT_URI);
+        } catch (Exception $e) {
+            throw OAuthException::invalidRequest(self::REDIRECT_URI);
+        }
+
+        try {
+            $this->scope         = $this->getQueryStringParameter(self::SCOPE,          $request);
+        } catch (Throwable $e2) {
+            throw OAuthException::invalidRequest(self::SCOPE);
+        } catch (Exception $e) {
+            throw OAuthException::invalidRequest(self::SCOPE);
+        }
+
+        try {
+            $this->state         = $this->getQueryStringParameter(self::STATE,          $request);
+        } catch (Throwable $e2) {
+            throw OAuthException::invalidRequest(self::STATE);
+        } catch (Exception $e) {
+            throw OAuthException::invalidRequest(self::STATE);
+        }
 
         $this->scopes        = $this->converScopeStringToArray($this->scope);
-
-        if ($this->clientId === null) 
-        {
-            $this->clientId = $this->getServerParameter('PHP_AUTH_USER', $request);
-        }
     }
 }

@@ -55,21 +55,21 @@ class AuthorizationRequest
      * 
      * @var string|null
      */
-    protected ?string $redirectUri;
+    protected ?string $redirectUri = null;
 
     /**
      * The state parameter on the authorization request
      * 
      * @var string|null
      */
-    protected ?string $state;
+    protected ?string $state = null;
 
     /**
      * The code callenge
      * 
      * @var string
      */
-    protected ?string $codeChallenge;
+    protected ?string $codeChallenge = null;
 
     /**
      * The code callenge method

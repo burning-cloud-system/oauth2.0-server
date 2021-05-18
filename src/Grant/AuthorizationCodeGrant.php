@@ -183,11 +183,6 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
      */
     public function validateAuthorizationRequest(ServerRequestInterface $request) : AuthorizationRequest
     {
-        if (is_null($this->getResponseTypeParame()->clientId))
-        {
-            throw OAuthException::invalidRequest(AuthorizationResponseTypeParame::CLIENT_ID);
-        }
-
         $client = $this->getClientEntity($this->getResponseTypeParame()->clientId, $request);
 
         $redirectUri = $this->getResponseTypeParame()->redirectUri;
@@ -203,6 +198,7 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
         $authorizationRequest->setRedirectUri($redirectUri);
         $state !== null && $authorizationRequest->setState($state);
         $authorizationRequest->setScopes($scopes);
+        $authorizationRequest->setCodeChallengMethod($this->getResponseTypeParame()->codeChallengeMethod);
 
         if ($this->getResponseTypeParame()->codeChallenge !== null)
         {
@@ -226,7 +222,6 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
             }
 
             $authorizationRequest->setCodeChallenge($this->getResponseTypeParame()->codeChallenge);
-            $authorizationRequest->setCodeChallengMethod($this->getResponseTypeParame()->codeChallengeMethod);
         }
         elseif ($this->requireCodeChallengeForPublicClients && !$client->isConfidential())
         {

@@ -103,7 +103,7 @@ abstract class ResponseTypeParame extends AbstractParame
         // set request parameter.
         try {
             $this->responseType  = $this->getQueryStringParameter(self::RESPONSE_TYPE,  $request);
-        } catch (Throwable $e2) {
+        } catch (Throwable $e) {
             throw OAuthException::invalidRequest(self::RESPONSE_TYPE);
         } catch (Exception $e) {
             throw OAuthException::invalidRequest(self::RESPONSE_TYPE);
@@ -111,7 +111,7 @@ abstract class ResponseTypeParame extends AbstractParame
 
         try {
             $this->clientId      = $this->getQueryStringParameter(self::CLIENT_ID,      $request);
-        } catch (Throwable $e2) {
+        } catch (Throwable $e) {
             // throw OAuthException::invalidRequest(self::CLIENT_ID);
         } catch (Exception $e) {
             // throw OAuthException::invalidRequest(self::CLIENT_ID);
@@ -121,7 +121,7 @@ abstract class ResponseTypeParame extends AbstractParame
         {
             try {
                 $this->clientId = $this->getServerParameter('PHP_AUTH_USER', $request);
-            } catch (Throwable $e2) {
+            } catch (Throwable $e) {
                 throw OAuthException::invalidRequest(self::CLIENT_ID);
             } catch (Exception $e) {
                 throw OAuthException::invalidRequest(self::CLIENT_ID);
@@ -131,7 +131,7 @@ abstract class ResponseTypeParame extends AbstractParame
 
         try {
             $this->redirectUri   = $this->getQueryStringParameter(self::REDIRECT_URI,   $request);
-        } catch (Throwable $e2) {
+        } catch (Throwable $e) {
             throw OAuthException::invalidRequest(self::REDIRECT_URI);
         } catch (Exception $e) {
             throw OAuthException::invalidRequest(self::REDIRECT_URI);
@@ -139,7 +139,7 @@ abstract class ResponseTypeParame extends AbstractParame
 
         try {
             $this->scope         = $this->getQueryStringParameter(self::SCOPE,          $request);
-        } catch (Throwable $e2) {
+        } catch (Throwable $e) {
             throw OAuthException::invalidRequest(self::SCOPE);
         } catch (Exception $e) {
             throw OAuthException::invalidRequest(self::SCOPE);
@@ -147,7 +147,7 @@ abstract class ResponseTypeParame extends AbstractParame
 
         try {
             $this->state         = $this->getQueryStringParameter(self::STATE,          $request);
-        } catch (Throwable $e2) {
+        } catch (Throwable $e) {
             throw OAuthException::invalidRequest(self::STATE);
         } catch (Exception $e) {
             throw OAuthException::invalidRequest(self::STATE);

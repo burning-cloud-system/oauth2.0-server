@@ -98,13 +98,13 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
         $this->setRefreshTokenTTL($refreshTokenTTL ?? new DateInterval('P1M'));
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    public function getIdentifier() : string
-    {
-        return 'authorization_code';
-    }
+    // /**
+    //  * {@inheritDoc}
+    //  */
+    // public function getIdentifier() : string
+    // {
+    //     return 'authorization_code';
+    // }
 
     /**
      * {@inheritDoc}
@@ -183,11 +183,6 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
      */
     public function validateAuthorizationRequest(ServerRequestInterface $request) : AuthorizationRequest
     {
-        if (is_null($this->getResponseTypeParame()->clientId))
-        {
-            throw OAuthException::invalidRequest(AuthorizationResponseTypeParame::CLIENT_ID);
-        }
-
         $client = $this->getClientEntity($this->getResponseTypeParame()->clientId, $request);
 
         $redirectUri = $this->getResponseTypeParame()->redirectUri;
@@ -198,11 +193,12 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
         $scopes = $this->validateScopes($this->getResponseTypeParame()->scopes, $redirectUri);
 
         $authorizationRequest = new AuthorizationRequest();
-        $authorizationRequest->setGrantTypeId($this->getIdentifier());
+        $authorizationRequest->setGrantType($this->getGrantType());
         $authorizationRequest->setClient($client);
         $authorizationRequest->setRedirectUri($redirectUri);
         $state !== null && $authorizationRequest->setState($state);
         $authorizationRequest->setScopes($scopes);
+        $authorizationRequest->setCodeChallengMethod($this->getResponseTypeParame()->codeChallengeMethod);
 
         if ($this->getResponseTypeParame()->codeChallenge !== null)
         {
@@ -226,7 +222,6 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
             }
 
             $authorizationRequest->setCodeChallenge($this->getResponseTypeParame()->codeChallenge);
-            $authorizationRequest->setCodeChallengMethod($this->getResponseTypeParame()->codeChallengeMethod);
         }
         elseif ($this->requireCodeChallengeForPublicClients && !$client->isConfidential())
         {
@@ -306,6 +301,8 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
      * @param ServerRequestInterface $request
      * @param ResponseTypeInterface $responseType
      * @return ResponseTypeInterface
+     * 
+     * @throws OAuthException
      */
     public function respondToAccessTokenRequest(ServerRequestInterface $request, ResponseTypeInterface $responseType): ResponseTypeInterface
     {
@@ -318,17 +315,13 @@ class AuthorizationCodeGrant extends AbstractAuthorizationCodeGrant implements G
         }
 
         $encryptedAuthorizationCode = $this->getGrantTypeParame()->code;
-        if ($encryptedAuthorizationCode === null)
-        {
-            throw OAuthException::invalidRequest(AuthorizationGrantTypeParame::CODE);
-        }
 
         try {
             $authorizationCodePayload = json_decode($this->decrypt($encryptedAuthorizationCode));
             $this->validateAuthorizationCode($authorizationCodePayload, $client, $request);
             $scopes = $this->scopeModel->finalizeScopes(
                 $this->validateScopes($authorizationCodePayload->scopes),
-                $this->getIdentifier(),
+                $this->getGrantType(),
                 $client,
                 $authorizationCodePayload->user_id
             );

@@ -10,7 +10,9 @@
 namespace BurningCloudSystem\OAuth2\Server\Request\Parame;
 
 use BurningCloudSystem\OAuth2\Server\Exception\OAuthException;
+use Exception;
 use Psr\Http\Message\ServerRequestInterface;
+use Throwable;
 
 abstract class GrantTypeParame extends AbstractParame
 {
@@ -77,16 +79,30 @@ abstract class GrantTypeParame extends AbstractParame
     public function bindParame(ServerRequestInterface $request)
     {
         // set request parameter.
-        $this->grantType = $this->getRequestParameter(self::GRANT_TYPE, $request);
+        try {
+            $this->grantType = $this->getRequestParameter(self::GRANT_TYPE, $request);
+        } catch (Throwable $e) {
+            throw OAuthException::invalidRequest(self::GRANT_TYPE, null, $e);
+        }
 
-        list($basicAuthUser, $basicAuthPassword) = $this->getBasicAuthCredentials($request);
-        $this->clientId = $this->getRequestParameter(self::CLIENT_ID, $request, $basicAuthUser);
-        if (is_null($this->clientId)) 
+        try {
+            list($basicAuthUser, $basicAuthPassword) = $this->getBasicAuthCredentials($request);
+            $this->clientId = $this->getRequestParameter(self::CLIENT_ID, $request, $basicAuthUser);    
+        } catch (Throwable $e) {
+            throw OAuthException::invalidRequest(self::CLIENT_ID, null, $e);            
+        }
+        if (empty($this->clientId)) 
         {
             throw OAuthException::invalidRequest(self::CLIENT_ID);
         }
-        $this->clientSecret = $this->getRequestParameter(self::CLIENT_SECRET, $request, $basicAuthPassword);
-        $this->redirectUri  = $this->getRequestParameter(self::REDIRECT_URI,  $request);
+
+        try {
+            $this->clientSecret = $this->getRequestParameter(self::CLIENT_SECRET, $request, $basicAuthPassword);
+        } catch (Throwable $e) {
+            throw OAuthException::invalidRequest(self::CLIENT_SECRET, null, $e);
+        }
+
+        $this->redirectUri  = $this->getRequestParameter(self::REDIRECT_URI,  $request, '');
     }
 
     /**
@@ -117,7 +133,7 @@ abstract class GrantTypeParame extends AbstractParame
             return [null, null];
         }
 
-        if (strpos($decoded, ':' === false))
+        if (strpos($decoded, ':') === false)
         {
             return [null, null];
         }
@@ -125,4 +141,3 @@ abstract class GrantTypeParame extends AbstractParame
         return explode(':', $decoded, 2);
     }
 }
-

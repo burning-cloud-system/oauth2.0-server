@@ -62,16 +62,6 @@ class RefreshTokenGrant extends AbstractGrant implements GrantInterface
      *
      * @return string
      */
-    public function getIdentifier(): string
-    {
-        return 'refresh_token';
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return string
-     */
     public function getGrantType(): ?string
     {
         return 'refresh_token';

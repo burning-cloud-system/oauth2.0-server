@@ -65,16 +65,6 @@ class PasswordGrant extends AbstractGrant implements GrantInterface
      *
      * @return string
      */
-    public function getIdentifier(): string
-    {
-        return 'password';
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return string
-     */
     public function getGrantType(): ?string
     {
         return 'password';

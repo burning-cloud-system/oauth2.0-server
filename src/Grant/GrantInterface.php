@@ -24,13 +24,6 @@ use Psr\Http\Message\ServerRequestInterface;
 interface GrantInterface
 {
     /**
-     * Return the Identifier.
-     *
-     * @return string
-     */
-    public function getIdentifier() : string;
-
-    /**
      * Return the grant type that can be used in matching up requests.
      *
      * @return string|null

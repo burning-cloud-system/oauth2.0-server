@@ -55,15 +55,28 @@ trait RequestParameterTrait
         return $this->getValueToParams($request->getServerParams(), $parameter, $default);
     }
 
-    private function getValueToParams(&$params, &$key, $default, $trim = false) : string
+    private function getValueToParams($params, $key, $default, $trim = false)
     {
-        return isset($params[$key]) ? $this->getValue($params[$key], $trim) : $default;
+        if (array_key_exists($key, $params))
+        {
+            return $this->getValue($params[$key], $trim);
+        } else
+        {
+            return $default;
+        }
     }
 
-    private function getValue($value, $trim = false) : string
+    private function getValue($value, $trim = false)
     {
         $trim && ($value = trim($value));
-        return strlen($value) > 0 ? $value : null;
+        if (strlen($value))
+        {
+            return $value;
+        }
+        else
+        {
+            return "";
+        }
     }
  }
 

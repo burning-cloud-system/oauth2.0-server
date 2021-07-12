@@ -52,9 +52,9 @@ abstract class AbstractGrant implements GrantInterface
     protected ?ResponseTypeParame $responseTypeParame = null;
 
     /**
-     * @var GrantTypeParame
+     * @var GrantTypeParame|null
      */
-    protected GrantTypeParame $grantTypeParame;
+    protected ?GrantTypeParame $grantTypeParame = null;
 
     /**
      * @var CryptKey
@@ -591,7 +591,6 @@ abstract class AbstractGrant implements GrantInterface
         if ($this->clientModel->validateClient($clientId, $clientSecret, $this->getGrantType()) === false)
         {
             $this->eventDispatcher()->dispatch(new RequestEvent(ClientAuthenticationFailedInterface::EVENT_NAME, $request));
-
             throw OAuthException::invalidClient($request);
         }
 

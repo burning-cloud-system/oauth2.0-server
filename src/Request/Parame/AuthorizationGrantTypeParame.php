@@ -9,7 +9,9 @@
 
 namespace BurningCloudSystem\OAuth2\Server\Request\Parame;
 
+use BurningCloudSystem\OAuth2\Server\Exception\OAuthException;
 use Psr\Http\Message\ServerRequestInterface;
+use Throwable;
 
 class AuthorizationGrantTypeParame extends GrantTypeParame
 {
@@ -39,7 +41,7 @@ class AuthorizationGrantTypeParame extends GrantTypeParame
      *
      * @var string
      */
-    public string $codeVerifier;
+    public ?string $codeVerifier;
 
     /**
      * {@inheritDoc}
@@ -52,7 +54,12 @@ class AuthorizationGrantTypeParame extends GrantTypeParame
         parent::bindParame($request);
 
         // set request parameter.
-        $this->code         = $this->getRequestParameter(self::CODE,          $request);
+        try {
+            $this->code = $this->getRequestParameter(self::CODE, $request);
+        } catch (Throwable $e) {
+            throw OAuthException::invalidRequest(self::GRANT_TYPE, null, $e);
+        }
+
         $this->codeVerifier = $this->getRequestParameter(self::CODE_VERIFIER, $request);
     }
 }

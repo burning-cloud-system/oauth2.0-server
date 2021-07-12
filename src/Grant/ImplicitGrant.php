@@ -64,16 +64,6 @@ class ImplicitGrant extends AbstractAuthorizationCodeGrant implements GrantInter
      *
      * @return string
      */
-    public function getIdentifier(): string
-    {
-        return 'implicit';
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return string
-     */
     public function getGrantType(): ?string
     {
         return null;

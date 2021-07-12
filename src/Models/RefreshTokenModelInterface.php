@@ -28,11 +28,10 @@ interface RefreshTokenModelInterface extends ModelInterface
      * Create a new refresh token name.
      *
      * @param RefreshTokenEntityInterface $refreshTokenEntity
-     * @return RefreshTokenEntityInterface
-     * 
+     * @return void
      * @throws UniqueTokenIdentifierConstraintViolationException
      */
-    public function persistNewRefreshToken(RefreshTokenEntityInterface $refreshTokenEntity) : RefreshTokenEntityInterface;
+    public function persistNewRefreshToken(RefreshTokenEntityInterface $refreshTokenEntity) : void;
 
     /**
      * Revoke the refresh token.

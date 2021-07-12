@@ -104,17 +104,13 @@ abstract class ResponseTypeParame extends AbstractParame
         try {
             $this->responseType  = $this->getQueryStringParameter(self::RESPONSE_TYPE,  $request);
         } catch (Throwable $e) {
-            throw OAuthException::invalidRequest(self::RESPONSE_TYPE);
-        } catch (Exception $e) {
-            throw OAuthException::invalidRequest(self::RESPONSE_TYPE);
+            throw OAuthException::invalidRequest(self::RESPONSE_TYPE, null, $e);
         }
 
         try {
             $this->clientId      = $this->getQueryStringParameter(self::CLIENT_ID,      $request);
         } catch (Throwable $e) {
-            // throw OAuthException::invalidRequest(self::CLIENT_ID);
-        } catch (Exception $e) {
-            // throw OAuthException::invalidRequest(self::CLIENT_ID);
+            // throw OAuthException::invalidRequest(self::CLIENT_ID, null, $e);
         }
 
         if (!isset($this->clientId))
@@ -122,9 +118,7 @@ abstract class ResponseTypeParame extends AbstractParame
             try {
                 $this->clientId = $this->getServerParameter('PHP_AUTH_USER', $request);
             } catch (Throwable $e) {
-                throw OAuthException::invalidRequest(self::CLIENT_ID);
-            } catch (Exception $e) {
-                throw OAuthException::invalidRequest(self::CLIENT_ID);
+                throw OAuthException::invalidRequest(self::CLIENT_ID, null, $e);
             }
    
         }
@@ -132,25 +126,19 @@ abstract class ResponseTypeParame extends AbstractParame
         try {
             $this->redirectUri   = $this->getQueryStringParameter(self::REDIRECT_URI,   $request);
         } catch (Throwable $e) {
-            throw OAuthException::invalidRequest(self::REDIRECT_URI);
-        } catch (Exception $e) {
-            throw OAuthException::invalidRequest(self::REDIRECT_URI);
+            throw OAuthException::invalidRequest(self::REDIRECT_URI, null, $e);
         }
 
         try {
             $this->scope         = $this->getQueryStringParameter(self::SCOPE,          $request);
         } catch (Throwable $e) {
-            throw OAuthException::invalidRequest(self::SCOPE);
-        } catch (Exception $e) {
-            throw OAuthException::invalidRequest(self::SCOPE);
+            throw OAuthException::invalidRequest(self::SCOPE, null, $e);
         }
 
         try {
             $this->state         = $this->getQueryStringParameter(self::STATE,          $request);
         } catch (Throwable $e) {
-            throw OAuthException::invalidRequest(self::STATE);
-        } catch (Exception $e) {
-            throw OAuthException::invalidRequest(self::STATE);
+            throw OAuthException::invalidRequest(self::STATE, null, $e);
         }
 
         $this->scopes        = $this->converScopeStringToArray($this->scope);

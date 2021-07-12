@@ -20,7 +20,7 @@ class AuthorizationRequest
      * 
      * @var string
      */
-    protected string $grantTypeId;
+    protected string $grantType;
 
     /**
      * The client identifier
@@ -79,24 +79,24 @@ class AuthorizationRequest
     protected string $codeChallengeMethod;
 
     /**
-     * Return the grant type identifier.
+     * Return the grant type.
      *
      * @return string
      */
-    public function getGrantTypeId() : string
+    public function getGrantType() : string
     {
-        return $this->grantTypeId;
+        return $this->grantType;
     }
 
     /**
-     * Set the grant type identifier.
+     * Set the grant type.
      *
-     * @param string $grantTypeId
+     * @param string $grantType
      * @return void
      */
-    public function setGrantTypeId(string $grantTypeId) : void
+    public function setGrantType(string $grantType) : void
     {
-        $this->grantTypeId = $grantTypeId;
+        $this->grantType = $grantType;
     }
 
     /**

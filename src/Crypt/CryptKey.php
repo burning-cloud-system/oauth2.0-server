@@ -114,9 +114,9 @@ class CryptKey
     /**
      * Retrieve key pass phrase
      *
-     * @return string
+     * @return string|null
      */
-    public function getPassPhrase() : string
+    public function getPassPhrase() : ?string
     {
         return $this->passPhrase;
     }

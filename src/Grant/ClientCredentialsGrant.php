@@ -49,16 +49,6 @@ class ClientCredentialsGrant extends AbstractGrant implements GrantInterface
      *
      * @return string
      */
-    public function getIdentifier(): string
-    {
-        return 'client_credentials';
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return string
-     */
     public function getGrantType(): ?string
     {
         return 'client_credentials';
@@ -135,7 +125,7 @@ class ClientCredentialsGrant extends AbstractGrant implements GrantInterface
 
         $scopes = $this->validateScopes($this->getGrantTypeParame()->scopes);
 
-        $finalizedScopes = $this->scopeModel->finalizeScopes($scopes, $this->getIdentifier(), $client);
+        $finalizedScopes = $this->scopeModel->finalizeScopes($scopes, $this->getGrantType(), $client);
 
         $accessToken = $this->issueAccessToken($this->accessTokenTTL, $client, null, $finalizedScopes);
 
